@@ -360,15 +360,15 @@ export const useDiagramStore = create<DiagramState>()(
         const topicData = state.project.topics.find(t => t.topic.id === topicId);
         if (topicData) {
           const stateNode = topicData.states.find(s => s.id === stateId);
-          // Allow deleting InstrumentEnd if TopicEnd exists, or TopicEnd if InstrumentEnd exists
-          const isTopicEnd = stateNode?.systemNodeType === 'TopicEnd';
+          // Allow deleting InstrumentEnd if TopicEnd exists
+          // TopicEnd cannot be deleted - topic should always have a path to proper end
           const isInstrumentEnd = stateNode?.systemNodeType === 'InstrumentEnd';
           const hasTopicEnd = topicData.states.some(s => s.systemNodeType === 'TopicEnd');
-          const hasInstrumentEnd = topicData.states.some(s => s.systemNodeType === 'InstrumentEnd');
           
-          const canDeleteSystemNode = 
-            (isTopicEnd && hasInstrumentEnd) || 
-            (isInstrumentEnd && hasTopicEnd);
+          // InstrumentEnd can be deleted only if TopicEnd exists
+          // TopicEnd can never be deleted
+          // Start nodes (TopicStart, NewInstrument) can never be deleted
+          const canDeleteSystemNode = isInstrumentEnd && hasTopicEnd;
           
           if (stateNode && (!stateNode.isSystemNode || canDeleteSystemNode)) {
             topicData.states = topicData.states.filter(s => s.id !== stateId);
