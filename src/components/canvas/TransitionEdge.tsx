@@ -14,6 +14,7 @@ interface TransitionEdgeData {
   onSelect: (id: string) => void;
   edgeIndex?: number;
   totalEdges?: number;
+  curveOffset?: number;
 }
 
 function getTransitionLabel(transition: Transition): string {
@@ -45,18 +46,19 @@ function generatePath(
   targetHandle: string | null | undefined,
   isSelfLoop: boolean,
   edgeIndex: number = 0,
-  totalEdges: number = 1
+  totalEdges: number = 1,
+  manualCurveOffset: number = 0
 ): { path: string; labelX: number; labelY: number } {
-  // Calculate offset multiplier - spread edges apart
+  // Calculate offset multiplier - spread edges apart, plus manual offset
   const offsetMultiplier = totalEdges > 1 ? (edgeIndex - (totalEdges - 1) / 2) : 0;
-  const baseOffset = offsetMultiplier * 60; // Increased spacing between edges
+  const baseOffset = offsetMultiplier * 60 + manualCurveOffset; // Add manual curve offset
   
   if (isSelfLoop) {
     // Self-loop: create distinctive loops on the right side
-    // Each loop gets progressively larger and more offset
-    const loopWidth = 80 + edgeIndex * 50;
+    // Each loop gets progressively larger and more offset, plus manual adjustment
+    const loopWidth = 80 + edgeIndex * 50 + Math.abs(manualCurveOffset);
     const loopHeight = 60 + edgeIndex * 40;
-    const verticalOffset = edgeIndex * 25;
+    const verticalOffset = edgeIndex * 25 + manualCurveOffset * 0.5;
     
     // Start from right side of node, loop out and back
     const path = `M ${sourceX} ${sourceY} 
@@ -121,6 +123,7 @@ export const TransitionEdge = memo(({
   const transition = edgeData?.transition;
   const edgeIndex = edgeData?.edgeIndex ?? 0;
   const totalEdges = edgeData?.totalEdges ?? 1;
+  const manualCurveOffset = transition?.curveOffset ?? 0;
   
   const isSelfLoop = source === target;
   const { path: edgePath, labelX, labelY } = generatePath(
@@ -132,7 +135,8 @@ export const TransitionEdge = memo(({
     targetHandleId,
     isSelfLoop,
     edgeIndex,
-    totalEdges
+    totalEdges,
+    manualCurveOffset
   );
 
   const label = transition ? getTransitionLabel(transition) : '';

@@ -43,9 +43,10 @@ interface DiagramState {
   updateStatePosition: (topicId: string, stateId: string, position: Position) => void;
   
   // Transition actions
-  addTransition: (topicId: string, from: string, to: string, messageType: string, flowType: FlowType) => string;
+  addTransition: (topicId: string, from: string, to: string, messageType: string, flowType: FlowType, sourceHandleId?: string, targetHandleId?: string) => string;
   updateTransition: (topicId: string, transitionId: string, updates: Partial<Omit<Transition, 'kind'>>) => void;
   deleteTransition: (topicId: string, transitionId: string) => void;
+  updateTransitionRouting: (topicId: string, transitionId: string, sourceHandleId?: string, targetHandleId?: string, curveOffset?: number) => void;
   
   // Selection
   selectElement: (elementId: string | null, elementType: 'state' | 'transition' | null) => void;
@@ -116,11 +117,11 @@ const createSampleProject = (): DiagramProject => {
           },
         ],
         transitions: [
-          { id: uuidv4(), from: 'NewInstrument', to: 'Submitted', kind: 'startInstrument', messageType: 'pacs.008', flowType: 'B2B' },
-          { id: uuidv4(), from: 'Submitted', to: 'Validated', kind: 'normal', messageType: 'validate', flowType: 'B2B' },
-          { id: uuidv4(), from: 'Submitted', to: 'Rejected', kind: 'normal', messageType: 'reject', flowType: 'B2B' },
-          { id: uuidv4(), from: 'Validated', to: 'TopicEnd', kind: 'endTopic', messageType: 'complete', flowType: 'B2B' },
-          { id: uuidv4(), from: 'Rejected', to: 'InstrumentEnd', kind: 'endInstrument', messageType: 'close', flowType: 'B2B' },
+          { id: uuidv4(), from: 'NewInstrument', to: 'Submitted', kind: 'startInstrument', messageType: 'pacs.008', flowType: 'B2B', sourceHandleId: 'source-bottom', targetHandleId: 'target-top' },
+          { id: uuidv4(), from: 'Submitted', to: 'Validated', kind: 'normal', messageType: 'validate', flowType: 'B2B', sourceHandleId: 'source-bottom', targetHandleId: 'target-top' },
+          { id: uuidv4(), from: 'Submitted', to: 'Rejected', kind: 'normal', messageType: 'reject', flowType: 'B2B', sourceHandleId: 'source-right', targetHandleId: 'target-left' },
+          { id: uuidv4(), from: 'Validated', to: 'TopicEnd', kind: 'endTopic', messageType: '', flowType: 'B2B', sourceHandleId: 'source-bottom', targetHandleId: 'target-top' },
+          { id: uuidv4(), from: 'Rejected', to: 'InstrumentEnd', kind: 'endInstrument', messageType: '', flowType: 'B2B', sourceHandleId: 'source-bottom', targetHandleId: 'target-top' },
         ],
       },
     ],
@@ -391,7 +392,7 @@ export const useDiagramStore = create<DiagramState>()(
         }
       }),
       
-      addTransition: (topicId, from, to, messageType, flowType) => {
+      addTransition: (topicId, from, to, messageType, flowType, sourceHandleId, targetHandleId) => {
         let transitionId = '';
         set((state) => {
           const topicData = state.project.topics.find(t => t.topic.id === topicId);
@@ -408,6 +409,8 @@ export const useDiagramStore = create<DiagramState>()(
               kind,
               messageType,
               flowType,
+              sourceHandleId: sourceHandleId || 'source-bottom',
+              targetHandleId: targetHandleId || 'target-top',
             };
             topicData.transitions.push(transition);
             state.project.updatedAt = new Date().toISOString();
@@ -443,6 +446,19 @@ export const useDiagramStore = create<DiagramState>()(
         if (topicData) {
           topicData.transitions = topicData.transitions.filter(t => t.id !== transitionId);
           state.project.updatedAt = new Date().toISOString();
+        }
+      }),
+
+      updateTransitionRouting: (topicId, transitionId, sourceHandleId, targetHandleId, curveOffset) => set((state) => {
+        const topicData = state.project.topics.find(t => t.topic.id === topicId);
+        if (topicData) {
+          const transition = topicData.transitions.find(t => t.id === transitionId);
+          if (transition) {
+            if (sourceHandleId !== undefined) transition.sourceHandleId = sourceHandleId;
+            if (targetHandleId !== undefined) transition.targetHandleId = targetHandleId;
+            if (curveOffset !== undefined) transition.curveOffset = curveOffset;
+            state.project.updatedAt = new Date().toISOString();
+          }
         }
       }),
       

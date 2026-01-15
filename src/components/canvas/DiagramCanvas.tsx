@@ -50,6 +50,8 @@ const defaultEdgeOptions = {
 interface PendingConnection {
   source: string;
   target: string;
+  sourceHandle?: string;
+  targetHandle?: string;
 }
 
 // Compute edge indices for multiple edges between same node pairs
@@ -88,6 +90,7 @@ function DiagramCanvasInner() {
     selectElement,
     addTransition,
     updateTransition,
+    updateTransitionRouting,
     deleteTransition,
     deleteState,
     updateStatePosition,
@@ -137,6 +140,8 @@ function DiagramCanvasInner() {
         id: transition.id,
         source: transition.from,
         target: transition.to,
+        sourceHandle: transition.sourceHandleId || 'source-bottom',
+        targetHandle: transition.targetHandleId || 'target-top',
         type: 'transition',
         data: {
           transition,
@@ -221,12 +226,19 @@ function DiagramCanvasInner() {
           params.source,
           params.target,
           '', // Empty messageType for end transitions
-          'B2B' // Default flowType (not used for end transitions)
+          'B2B', // Default flowType (not used for end transitions)
+          params.sourceHandle || 'source-bottom',
+          params.targetHandle || 'target-top'
         );
         selectElement(transitionId, 'transition');
       } else {
         // Open dialog to collect transition details
-        setPendingConnection({ source: params.source, target: params.target });
+        setPendingConnection({ 
+          source: params.source, 
+          target: params.target,
+          sourceHandle: params.sourceHandle || 'source-bottom',
+          targetHandle: params.targetHandle || 'target-top',
+        });
       }
     },
     [project.selectedTopicId, selectedTopicData, addTransition, selectElement]
@@ -240,7 +252,9 @@ function DiagramCanvasInner() {
         pendingConnection.source, 
         pendingConnection.target, 
         messageType, 
-        flowType
+        flowType,
+        pendingConnection.sourceHandle,
+        pendingConnection.targetHandle
       );
       setPendingConnection(null);
       // Select the new transition
@@ -274,16 +288,24 @@ function DiagramCanvasInner() {
     (oldEdge: Edge, newConnection: Connection) => {
       if (!project.selectedTopicId || !newConnection.source || !newConnection.target) return;
       
-      // Update the transition in the store
+      // Update the transition in the store with new source/target and handle IDs
       updateTransition(project.selectedTopicId, oldEdge.id, {
         from: newConnection.source,
         to: newConnection.target,
       });
       
+      // Also update the handle IDs
+      updateTransitionRouting(
+        project.selectedTopicId,
+        oldEdge.id,
+        newConnection.sourceHandle || undefined,
+        newConnection.targetHandle || undefined
+      );
+      
       // Update local edges state
       setEdges((els) => reconnectEdge(oldEdge, newConnection, els));
     },
-    [project.selectedTopicId, updateTransition, setEdges]
+    [project.selectedTopicId, updateTransition, updateTransitionRouting, setEdges]
   );
 
   // Custom edges change handler to sync deletions with store

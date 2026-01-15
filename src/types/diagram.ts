@@ -58,6 +58,10 @@ export interface Transition {
   topic?: string; // optional
   messageType: string; // required
   flowType: FlowType; // required
+  // Edge routing properties (persisted)
+  sourceHandleId?: string; // which handle on source node
+  targetHandleId?: string; // which handle on target node
+  curveOffset?: number; // manual curve offset set by user
 }
 
 export interface TopicData {
