@@ -136,12 +136,14 @@ function DiagramCanvasInner() {
     if (!selectedTopicData) return [];
     return selectedTopicData.transitions.map((transition) => {
       const indexInfo = edgeIndices.get(transition.id) ?? { index: 0, total: 1 };
+      const sourceHandle = transition.sourceHandleId || 'source-bottom';
+      const targetHandle = transition.targetHandleId || 'target-top';
       return {
         id: transition.id,
         source: transition.from,
         target: transition.to,
-        sourceHandle: transition.sourceHandleId || 'source-bottom',
-        targetHandle: transition.targetHandleId || 'target-top',
+        sourceHandle,
+        targetHandle,
         type: 'transition',
         data: {
           transition,
@@ -154,6 +156,8 @@ function DiagramCanvasInner() {
           },
           edgeIndex: indexInfo.index,
           totalEdges: indexInfo.total,
+          sourceHandleId: sourceHandle,
+          targetHandleId: targetHandle,
         },
       };
     });
