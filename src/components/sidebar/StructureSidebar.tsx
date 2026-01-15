@@ -3,6 +3,7 @@ import { Plus, Trash2, Crown, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog,
   DialogContent,
@@ -177,21 +178,23 @@ export function StructureSidebar() {
                       <p className="text-xs opacity-70 truncate">{topicData.topic.id}</p>
                     )}
                   </div>
-                  {topicData.topic.kind === 'root' && (
-                    <Crown className="h-4 w-4 text-yellow-400 flex-shrink-0" />
-                  )}
-                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    {topicData.topic.kind !== 'root' && (
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="h-6 w-6"
-                        onClick={(e) => handleSetRoot(topicData.topic.id, e)}
-                        title="Set as root"
-                      >
-                        <Crown className="h-3 w-3" />
-                      </Button>
-                    )}
+                  {/* Root topic checkbox with crown icon */}
+                  <div 
+                    className="flex items-center gap-1 flex-shrink-0"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <Checkbox
+                      checked={topicData.topic.kind === 'root'}
+                      onCheckedChange={() => setRootTopic(topicData.topic.id)}
+                      className="h-4 w-4"
+                      title={topicData.topic.kind === 'root' ? 'Unset as root' : 'Set as root'}
+                    />
+                    <Crown className={cn(
+                      "h-4 w-4",
+                      topicData.topic.kind === 'root' ? "text-yellow-400" : "text-muted-foreground/30"
+                    )} />
+                  </div>
+                  <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
                     <Button
                       size="icon"
                       variant="ghost"

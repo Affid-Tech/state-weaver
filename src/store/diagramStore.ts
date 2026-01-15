@@ -15,12 +15,15 @@ import type {
   Position 
 } from '@/types/diagram';
 import { deriveTransitionKind } from '@/types/diagram';
+import type { FieldConfig } from '@/types/fieldConfig';
+import { DEFAULT_FIELD_CONFIG } from '@/types/fieldConfig';
 
 interface DiagramState {
   project: DiagramProject;
   selectedElementId: string | null;
   selectedElementType: 'state' | 'transition' | null;
   viewMode: 'topic' | 'aggregate';
+  fieldConfig: FieldConfig;
   
   // Actions
   setProject: (project: DiagramProject) => void;
@@ -53,6 +56,9 @@ interface DiagramState {
   
   // View mode
   setViewMode: (mode: 'topic' | 'aggregate') => void;
+  
+  // Field config
+  updateFieldConfig: (config: Partial<FieldConfig>) => void;
   
   // Import/Export
   exportProject: () => string;
@@ -181,6 +187,7 @@ export const useDiagramStore = create<DiagramState>()(
       selectedElementId: null,
       selectedElementType: null,
       viewMode: 'topic',
+      fieldConfig: DEFAULT_FIELD_CONFIG,
 
       setProject: (project) => set({ project }),
       
@@ -461,6 +468,10 @@ export const useDiagramStore = create<DiagramState>()(
         state.viewMode = mode;
       }),
       
+      updateFieldConfig: (config) => set((state) => {
+        state.fieldConfig = { ...state.fieldConfig, ...config };
+      }),
+      
       exportProject: () => {
         return JSON.stringify(get().project, null, 2);
       },
@@ -480,6 +491,7 @@ export const useDiagramStore = create<DiagramState>()(
         selectedElementId: null,
         selectedElementType: null,
         viewMode: 'topic',
+        fieldConfig: DEFAULT_FIELD_CONFIG,
       }),
     })),
     {
