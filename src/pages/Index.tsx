@@ -64,7 +64,7 @@ const Index = () => {
             <div className="w-12 h-1 rounded-full bg-muted-foreground/30" />
           </div>
           
-          <div className="flex-1 min-h-0 overflow-hidden">
+          <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
             <PreviewPanel />
           </div>
         </main>

@@ -92,8 +92,8 @@ export function PreviewPanel() {
   }, [isDragging]);
 
   return (
-    <div className="border-t border-border bg-card flex flex-col flex-1 min-h-0">
-      <div className="flex items-center justify-between px-4 py-2 border-b border-border">
+    <div className="border-t border-border bg-card flex flex-col h-full overflow-hidden">
+      <div className="flex items-center justify-between px-4 py-2 border-b border-border flex-shrink-0">
         <button
           onClick={() => setIsExpanded(!isExpanded)}
           className="flex items-center gap-2 text-sm font-medium hover:text-primary transition-colors"
@@ -123,7 +123,7 @@ export function PreviewPanel() {
       </div>
 
       {isExpanded && (
-        <div id="preview-content-container" className="flex-1 flex min-h-0">
+        <div id="preview-content-container" className="flex-1 flex min-h-0 overflow-hidden">
           {/* SVG Preview */}
           <div className="flex-1 overflow-auto bg-background p-4">
             {isLoading && (
