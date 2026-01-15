@@ -3,6 +3,7 @@ import {
   BaseEdge,
   EdgeLabelRenderer,
   type EdgeProps,
+  getSmoothStepPath,
 } from '@xyflow/react';
 import { cn } from '@/lib/utils';
 import type { Transition, TransitionKind } from '@/types/diagram';
@@ -11,12 +12,12 @@ interface TransitionEdgeData {
   transition: Transition;
   isSelected: boolean;
   onSelect: (id: string) => void;
-  edgeIndex?: number; // Index among edges with same source/target pair
-  totalEdges?: number; // Total edges between same nodes
+  edgeIndex?: number;
+  totalEdges?: number;
 }
 
 function getTransitionLabel(transition: Transition): string {
-  // No label for end transitions (to InstrumentEnd or TopicEnd)
+  // No label for end transitions
   if (transition.kind === 'endTopic' || transition.kind === 'endInstrument') {
     return '';
   }
@@ -34,52 +35,64 @@ function isEndTransition(kind: TransitionKind): boolean {
   return kind === 'endTopic' || kind === 'endInstrument';
 }
 
-// Generate a curved path with offset support for multiple edges
-function generateCurvedPath(
+// Generate path with better separation for multiple edges
+function generatePath(
   sourceX: number,
   sourceY: number,
   targetX: number,
   targetY: number,
+  sourceHandle: string | null | undefined,
+  targetHandle: string | null | undefined,
   isSelfLoop: boolean,
   edgeIndex: number = 0,
   totalEdges: number = 1
 ): { path: string; labelX: number; labelY: number } {
-  // Calculate offset for multiple edges between same nodes
-  const baseOffset = (edgeIndex - (totalEdges - 1) / 2) * 40;
+  // Calculate offset multiplier - spread edges apart
+  const offsetMultiplier = totalEdges > 1 ? (edgeIndex - (totalEdges - 1) / 2) : 0;
+  const baseOffset = offsetMultiplier * 60; // Increased spacing between edges
   
   if (isSelfLoop) {
-    // Self-loop: create a loop on the right side of the node
-    // Offset each additional self-loop further out
-    const loopSize = 50 + edgeIndex * 30;
-    const loopOffset = edgeIndex * 20;
+    // Self-loop: create distinctive loops on the right side
+    // Each loop gets progressively larger and more offset
+    const loopWidth = 80 + edgeIndex * 50;
+    const loopHeight = 60 + edgeIndex * 40;
+    const verticalOffset = edgeIndex * 25;
+    
+    // Start from right side of node, loop out and back
     const path = `M ${sourceX} ${sourceY} 
-                  C ${sourceX + loopSize} ${sourceY - loopSize - loopOffset}, 
-                    ${sourceX + loopSize} ${sourceY + loopSize + loopOffset}, 
+                  C ${sourceX + loopWidth} ${sourceY - loopHeight - verticalOffset}, 
+                    ${sourceX + loopWidth} ${sourceY + loopHeight + verticalOffset}, 
                     ${targetX} ${targetY}`;
+    
     return {
       path,
-      labelX: sourceX + loopSize + 10,
-      labelY: sourceY + loopOffset,
+      labelX: sourceX + loopWidth + 15,
+      labelY: sourceY + verticalOffset,
     };
   }
 
-  // Calculate distance and midpoint
+  // Calculate direction vector
   const dx = targetX - sourceX;
   const dy = targetY - sourceY;
   const distance = Math.sqrt(dx * dx + dy * dy);
   
-  // Perpendicular vector (normalized)
+  if (distance < 1) {
+    return { path: `M ${sourceX} ${sourceY} L ${targetX} ${targetY}`, labelX: sourceX, labelY: sourceY };
+  }
+  
+  // Perpendicular vector for offset
   const perpX = -dy / distance;
   const perpY = dx / distance;
   
-  // Base curvature + offset for multiple edges
-  const curvature = Math.min(50, Math.max(20, distance * 0.15)) + baseOffset;
+  // Apply offset perpendicular to the line
+  const curvature = Math.min(80, Math.max(30, distance * 0.2)) + Math.abs(baseOffset);
+  const curveDirection = baseOffset >= 0 ? 1 : -1;
   
   // Control point
   const midX = (sourceX + targetX) / 2;
   const midY = (sourceY + targetY) / 2;
-  const ctrlX = midX + perpX * curvature;
-  const ctrlY = midY + perpY * curvature;
+  const ctrlX = midX + perpX * curvature * (offsetMultiplier !== 0 ? Math.sign(offsetMultiplier) : curveDirection);
+  const ctrlY = midY + perpY * curvature * (offsetMultiplier !== 0 ? Math.sign(offsetMultiplier) : curveDirection);
   
   // Quadratic bezier curve
   const path = `M ${sourceX} ${sourceY} Q ${ctrlX} ${ctrlY} ${targetX} ${targetY}`;
@@ -99,6 +112,8 @@ export const TransitionEdge = memo(({
   targetY,
   source,
   target,
+  sourceHandleId,
+  targetHandleId,
   data,
   selected,
 }: EdgeProps) => {
@@ -108,11 +123,13 @@ export const TransitionEdge = memo(({
   const totalEdges = edgeData?.totalEdges ?? 1;
   
   const isSelfLoop = source === target;
-  const { path: edgePath, labelX, labelY } = generateCurvedPath(
+  const { path: edgePath, labelX, labelY } = generatePath(
     sourceX,
     sourceY,
     targetX,
     targetY,
+    sourceHandleId,
+    targetHandleId,
     isSelfLoop,
     edgeIndex,
     totalEdges

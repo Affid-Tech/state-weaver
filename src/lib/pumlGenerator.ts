@@ -38,6 +38,10 @@ function escapeLabel(label: string): string {
 }
 
 function getTransitionLabel(transition: Transition): string {
+  // End transitions have no label
+  if (transition.kind === 'endTopic' || transition.kind === 'endInstrument') {
+    return '';
+  }
   const parts: string[] = [];
   if (transition.revision) parts.push(transition.revision);
   if (transition.instrument) parts.push(transition.instrument);
@@ -124,7 +128,11 @@ export function generateTopicPuml(project: DiagramProject, topicId: string): str
     }
     
     const label = getTransitionLabel(transition);
-    lines.push(`${fromAlias} --> ${toAlias} : ${label}`);
+    if (label) {
+      lines.push(`${fromAlias} --> ${toAlias} : ${label}`);
+    } else {
+      lines.push(`${fromAlias} --> ${toAlias}`);
+    }
   });
   lines.push('');
 
@@ -187,7 +195,11 @@ export function generateAggregatePuml(project: DiagramProject): string | null {
         : `${rootId}.${transition.to}`;
     
     const label = getTransitionLabel(transition);
-    lines.push(`    ${fromAlias} --> ${toAlias} : ${label}`);
+    if (label) {
+      lines.push(`    ${fromAlias} --> ${toAlias} : ${label}`);
+    } else {
+      lines.push(`    ${fromAlias} --> ${toAlias}`);
+    }
   });
   lines.push('  }');
   lines.push('');
@@ -237,7 +249,11 @@ export function generateAggregatePuml(project: DiagramProject): string | null {
           : `${topicAlias}.${transition.to}`;
       
       const label = getTransitionLabel(transition);
-      lines.push(`    ${fromAlias} --> ${toAlias} : ${label}`);
+      if (label) {
+        lines.push(`    ${fromAlias} --> ${toAlias} : ${label}`);
+      } else {
+        lines.push(`    ${fromAlias} --> ${toAlias}`);
+      }
     });
     lines.push('  }');
     lines.push('');
