@@ -43,21 +43,46 @@ export const StateNodeComponent = memo(({ data, id }: StateNodeProps) => {
   const isStart = state.systemNodeType === 'TopicStart' || state.systemNodeType === 'NewInstrument';
   const isEnd = state.systemNodeType === 'TopicEnd' || state.systemNodeType === 'InstrumentEnd';
 
+  // Common handle styles
+  const handleClass = '!bg-primary !border-background !w-2 !h-2';
+
   return (
     <div
       onClick={handleClick}
       className={cn(
-        'px-4 py-3 rounded-lg border-2 shadow-sm cursor-pointer transition-all min-w-[120px] text-center',
+        'px-4 py-3 rounded-lg border-2 shadow-sm cursor-pointer transition-all min-w-[120px] text-center relative',
         getNodeStyle(),
         isSelected && 'ring-2 ring-state-selected-ring ring-offset-2 ring-offset-background'
       )}
     >
+      {/* Target handles (inputs) - on all sides except for start nodes */}
       {!isStart && (
-        <Handle
-          type="target"
-          position={Position.Top}
-          className="!bg-primary !border-background"
-        />
+        <>
+          <Handle
+            type="target"
+            position={Position.Top}
+            id="target-top"
+            className={handleClass}
+          />
+          <Handle
+            type="target"
+            position={Position.Left}
+            id="target-left"
+            className={handleClass}
+          />
+          <Handle
+            type="target"
+            position={Position.Right}
+            id="target-right"
+            className={handleClass}
+          />
+          <Handle
+            type="target"
+            position={Position.Bottom}
+            id="target-bottom"
+            className={handleClass}
+          />
+        </>
       )}
       
       <div className="flex items-center justify-center gap-2">
@@ -75,12 +100,34 @@ export const StateNodeComponent = memo(({ data, id }: StateNodeProps) => {
         </div>
       )}
 
+      {/* Source handles (outputs) - on all sides except for end nodes */}
       {!isEnd && (
-        <Handle
-          type="source"
-          position={Position.Bottom}
-          className="!bg-primary !border-background"
-        />
+        <>
+          <Handle
+            type="source"
+            position={Position.Top}
+            id="source-top"
+            className={handleClass}
+          />
+          <Handle
+            type="source"
+            position={Position.Left}
+            id="source-left"
+            className={handleClass}
+          />
+          <Handle
+            type="source"
+            position={Position.Right}
+            id="source-right"
+            className={handleClass}
+          />
+          <Handle
+            type="source"
+            position={Position.Bottom}
+            id="source-bottom"
+            className={handleClass}
+          />
+        </>
       )}
     </div>
   );
