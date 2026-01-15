@@ -64,21 +64,29 @@ export function StructureSidebar() {
     <aside className="w-64 bg-sidebar border-r border-sidebar-border flex flex-col">
       {/* Instrument Section */}
       <div className="p-4 border-b border-sidebar-border">
-        <Label className="text-xs text-sidebar-muted-foreground uppercase tracking-wider">
+        <Label className="text-xs text-sidebar-muted-foreground uppercase tracking-wider mb-3 block">
           Instrument
         </Label>
-        <Input
-          value={project.instrument.id}
-          onChange={(e) => updateInstrument({ id: e.target.value })}
-          placeholder="Instrument ID"
-          className="mt-2 bg-sidebar-accent border-sidebar-border text-sidebar-foreground placeholder:text-sidebar-muted-foreground"
-        />
-        <Input
-          value={project.instrument.label || ''}
-          onChange={(e) => updateInstrument({ label: e.target.value })}
-          placeholder="Label (optional)"
-          className="mt-2 bg-sidebar-accent border-sidebar-border text-sidebar-foreground placeholder:text-sidebar-muted-foreground"
-        />
+        <div className="space-y-3">
+          <div className="space-y-1">
+            <Label className="text-xs text-sidebar-muted-foreground">ID</Label>
+            <Input
+              value={project.instrument.id}
+              onChange={(e) => updateInstrument({ id: e.target.value })}
+              placeholder="e.g., pacs_008"
+              className="bg-sidebar-accent border-sidebar-border text-sidebar-foreground placeholder:text-sidebar-muted-foreground"
+            />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs text-sidebar-muted-foreground">Label (optional)</Label>
+            <Input
+              value={project.instrument.label || ''}
+              onChange={(e) => updateInstrument({ label: e.target.value })}
+              placeholder="e.g., PACS 008 Payment"
+              className="bg-sidebar-accent border-sidebar-border text-sidebar-foreground placeholder:text-sidebar-muted-foreground"
+            />
+          </div>
+        </div>
       </div>
 
       {/* Topics Section */}

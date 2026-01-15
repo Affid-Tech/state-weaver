@@ -1,4 +1,4 @@
-import { memo, useCallback } from 'react';
+import { memo, useCallback, useState } from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { Lock } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -7,6 +7,7 @@ import type { StateNode } from '@/types/diagram';
 interface StateNodeData {
   state: StateNode;
   isSelected: boolean;
+  isConnecting?: boolean;
   onSelect: (id: string) => void;
 }
 
@@ -16,7 +17,8 @@ interface StateNodeProps {
 }
 
 export const StateNodeComponent = memo(({ data, id }: StateNodeProps) => {
-  const { state, isSelected, onSelect } = data;
+  const { state, isSelected, isConnecting, onSelect } = data;
+  const [isHovered, setIsHovered] = useState(false);
 
   const handleClick = useCallback(() => {
     onSelect(id);
@@ -43,12 +45,20 @@ export const StateNodeComponent = memo(({ data, id }: StateNodeProps) => {
   const isStart = state.systemNodeType === 'TopicStart' || state.systemNodeType === 'NewInstrument';
   const isEnd = state.systemNodeType === 'TopicEnd' || state.systemNodeType === 'InstrumentEnd';
 
-  // Common handle styles
-  const handleClass = '!bg-primary !border-background !w-2 !h-2';
+  // Show handles on hover, selection, or during connection
+  const showHandles = isHovered || isSelected || isConnecting;
+
+  // Common handle styles - visible only when showHandles is true
+  const handleClass = cn(
+    '!border-background !w-2 !h-2 transition-opacity duration-150',
+    showHandles ? '!bg-primary opacity-100' : '!bg-transparent opacity-0'
+  );
 
   return (
     <div
       onClick={handleClick}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
       className={cn(
         'px-4 py-3 rounded-lg border-2 shadow-sm cursor-pointer transition-all min-w-[120px] text-center relative',
         getNodeStyle(),
