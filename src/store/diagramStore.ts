@@ -1,0 +1,376 @@
+import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
+import { immer } from 'zustand/middleware/immer';
+import { v4 as uuidv4 } from 'uuid';
+import type { 
+  DiagramProject, 
+  Instrument, 
+  Topic, 
+  TopicData, 
+  StateNode, 
+  Transition, 
+  TopicKind,
+  TransitionKind,
+  Position 
+} from '@/types/diagram';
+
+interface DiagramState {
+  project: DiagramProject;
+  selectedElementId: string | null;
+  selectedElementType: 'state' | 'transition' | null;
+  viewMode: 'topic' | 'aggregate';
+  
+  // Actions
+  setProject: (project: DiagramProject) => void;
+  updateProjectName: (name: string) => void;
+  updateInstrument: (instrument: Partial<Instrument>) => void;
+  
+  // Topic actions
+  createTopic: (id: string, kind: TopicKind, label?: string) => void;
+  updateTopic: (topicId: string, updates: Partial<Topic>) => void;
+  deleteTopic: (topicId: string) => void;
+  selectTopic: (topicId: string) => void;
+  setRootTopic: (topicId: string) => void;
+  
+  // State actions
+  addState: (topicId: string, id: string, label?: string, position?: Position) => void;
+  updateState: (topicId: string, stateId: string, updates: Partial<StateNode>) => void;
+  deleteState: (topicId: string, stateId: string) => void;
+  updateStatePosition: (topicId: string, stateId: string, position: Position) => void;
+  
+  // Transition actions
+  addTransition: (topicId: string, from: string, to: string, label?: string, kind?: TransitionKind) => void;
+  updateTransition: (topicId: string, transitionId: string, updates: Partial<Transition>) => void;
+  deleteTransition: (topicId: string, transitionId: string) => void;
+  
+  // Selection
+  selectElement: (elementId: string | null, elementType: 'state' | 'transition' | null) => void;
+  
+  // View mode
+  setViewMode: (mode: 'topic' | 'aggregate') => void;
+  
+  // Import/Export
+  exportProject: () => string;
+  importProject: (json: string) => boolean;
+  resetProject: () => void;
+}
+
+const createSampleProject = (): DiagramProject => {
+  const projectId = uuidv4();
+  return {
+    id: projectId,
+    name: 'Payment Processing',
+    instrument: { id: 'pacs_008', label: 'PACS 008 Payment' },
+    topics: [
+      {
+        topic: { id: 'Release', label: 'Payment Release', kind: 'root' },
+        states: [
+          {
+            id: 'NewInstrument',
+            label: 'New Instrument',
+            stereotype: 'NewInstrument',
+            position: { x: 250, y: 50 },
+            isSystemNode: true,
+            systemNodeType: 'NewInstrument',
+          },
+          {
+            id: 'TopicEnd',
+            label: 'Topic End',
+            stereotype: 'End',
+            position: { x: 250, y: 400 },
+            isSystemNode: true,
+            systemNodeType: 'TopicEnd',
+          },
+          {
+            id: 'Submitted',
+            label: 'Submitted',
+            stereotype: 'Submitted',
+            position: { x: 250, y: 150 },
+            isSystemNode: false,
+          },
+          {
+            id: 'Validated',
+            label: 'Validated',
+            stereotype: 'Validated',
+            position: { x: 250, y: 250 },
+            isSystemNode: false,
+          },
+          {
+            id: 'Rejected',
+            label: 'Rejected',
+            stereotype: 'Rejected',
+            position: { x: 450, y: 200 },
+            isSystemNode: false,
+          },
+        ],
+        transitions: [
+          { id: uuidv4(), from: 'NewInstrument', to: 'Submitted', label: 'pacs.008', kind: 'startInstrument' },
+          { id: uuidv4(), from: 'Submitted', to: 'Validated', label: 'validate', kind: 'normal' },
+          { id: uuidv4(), from: 'Submitted', to: 'Rejected', label: 'reject', kind: 'normal' },
+          { id: uuidv4(), from: 'Validated', to: 'TopicEnd', label: 'complete', kind: 'endTopic' },
+          { id: uuidv4(), from: 'Rejected', to: 'TopicEnd', label: 'close', kind: 'endTopic' },
+        ],
+      },
+    ],
+    selectedTopicId: 'Release',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+};
+
+const createDefaultProject = (): DiagramProject => createSampleProject();
+
+const createSystemNodes = (kind: TopicKind): StateNode[] => {
+  if (kind === 'root') {
+    return [
+      {
+        id: 'NewInstrument',
+        label: 'New Instrument',
+        stereotype: 'NewInstrument',
+        position: { x: 100, y: 100 },
+        isSystemNode: true,
+        systemNodeType: 'NewInstrument',
+      },
+      {
+        id: 'TopicEnd',
+        label: 'Topic End',
+        stereotype: 'End',
+        position: { x: 400, y: 300 },
+        isSystemNode: true,
+        systemNodeType: 'TopicEnd',
+      },
+    ];
+  }
+  return [
+    {
+      id: 'TopicStart',
+      label: 'Topic Start',
+      stereotype: 'Start',
+      position: { x: 100, y: 100 },
+      isSystemNode: true,
+      systemNodeType: 'TopicStart',
+    },
+    {
+      id: 'TopicEnd',
+      label: 'Topic End',
+      stereotype: 'End',
+      position: { x: 400, y: 300 },
+      isSystemNode: true,
+      systemNodeType: 'TopicEnd',
+    },
+  ];
+};
+
+export const useDiagramStore = create<DiagramState>()(
+  persist(
+    immer((set, get) => ({
+      project: createDefaultProject(),
+      selectedElementId: null,
+      selectedElementType: null,
+      viewMode: 'topic',
+
+      setProject: (project) => set({ project }),
+      
+      updateProjectName: (name) => set((state) => {
+        state.project.name = name;
+        state.project.updatedAt = new Date().toISOString();
+      }),
+      
+      updateInstrument: (instrument) => set((state) => {
+        state.project.instrument = { ...state.project.instrument, ...instrument };
+        state.project.updatedAt = new Date().toISOString();
+      }),
+      
+      createTopic: (id, kind, label) => set((state) => {
+        const existingRoot = state.project.topics.find(t => t.topic.kind === 'root');
+        if (kind === 'root' && existingRoot) {
+          // Change existing root to normal
+          existingRoot.topic.kind = 'normal';
+          // Update system nodes for the existing root
+          const startNode = existingRoot.states.find(s => s.systemNodeType === 'NewInstrument');
+          if (startNode) {
+            startNode.id = 'TopicStart';
+            startNode.label = 'Topic Start';
+            startNode.stereotype = 'Start';
+            startNode.systemNodeType = 'TopicStart';
+          }
+        }
+        
+        const topicData: TopicData = {
+          topic: { id, kind, label },
+          states: createSystemNodes(kind),
+          transitions: [],
+        };
+        state.project.topics.push(topicData);
+        state.project.selectedTopicId = id;
+        state.project.updatedAt = new Date().toISOString();
+      }),
+      
+      updateTopic: (topicId, updates) => set((state) => {
+        const topicData = state.project.topics.find(t => t.topic.id === topicId);
+        if (topicData) {
+          Object.assign(topicData.topic, updates);
+          state.project.updatedAt = new Date().toISOString();
+        }
+      }),
+      
+      deleteTopic: (topicId) => set((state) => {
+        state.project.topics = state.project.topics.filter(t => t.topic.id !== topicId);
+        if (state.project.selectedTopicId === topicId) {
+          state.project.selectedTopicId = state.project.topics[0]?.topic.id ?? null;
+        }
+        state.project.updatedAt = new Date().toISOString();
+      }),
+      
+      selectTopic: (topicId) => set((state) => {
+        state.project.selectedTopicId = topicId;
+        state.selectedElementId = null;
+        state.selectedElementType = null;
+      }),
+      
+      setRootTopic: (topicId) => set((state) => {
+        state.project.topics.forEach(t => {
+          if (t.topic.id === topicId) {
+            t.topic.kind = 'root';
+            // Update system nodes
+            const startNode = t.states.find(s => s.systemNodeType === 'TopicStart');
+            if (startNode) {
+              startNode.id = 'NewInstrument';
+              startNode.label = 'New Instrument';
+              startNode.stereotype = 'NewInstrument';
+              startNode.systemNodeType = 'NewInstrument';
+            }
+          } else if (t.topic.kind === 'root') {
+            t.topic.kind = 'normal';
+            const startNode = t.states.find(s => s.systemNodeType === 'NewInstrument');
+            if (startNode) {
+              startNode.id = 'TopicStart';
+              startNode.label = 'Topic Start';
+              startNode.stereotype = 'Start';
+              startNode.systemNodeType = 'TopicStart';
+            }
+          }
+        });
+        state.project.updatedAt = new Date().toISOString();
+      }),
+      
+      addState: (topicId, id, label, position) => set((state) => {
+        const topicData = state.project.topics.find(t => t.topic.id === topicId);
+        if (topicData) {
+          const newState: StateNode = {
+            id,
+            label,
+            stereotype: id,
+            position: position ?? { x: 250, y: 200 },
+            isSystemNode: false,
+          };
+          topicData.states.push(newState);
+          state.project.updatedAt = new Date().toISOString();
+        }
+      }),
+      
+      updateState: (topicId, stateId, updates) => set((state) => {
+        const topicData = state.project.topics.find(t => t.topic.id === topicId);
+        if (topicData) {
+          const stateNode = topicData.states.find(s => s.id === stateId);
+          if (stateNode && !stateNode.isSystemNode) {
+            Object.assign(stateNode, updates);
+            state.project.updatedAt = new Date().toISOString();
+          }
+        }
+      }),
+      
+      deleteState: (topicId, stateId) => set((state) => {
+        const topicData = state.project.topics.find(t => t.topic.id === topicId);
+        if (topicData) {
+          const stateNode = topicData.states.find(s => s.id === stateId);
+          if (stateNode && !stateNode.isSystemNode) {
+            topicData.states = topicData.states.filter(s => s.id !== stateId);
+            topicData.transitions = topicData.transitions.filter(
+              t => t.from !== stateId && t.to !== stateId
+            );
+            state.project.updatedAt = new Date().toISOString();
+          }
+        }
+      }),
+      
+      updateStatePosition: (topicId, stateId, position) => set((state) => {
+        const topicData = state.project.topics.find(t => t.topic.id === topicId);
+        if (topicData) {
+          const stateNode = topicData.states.find(s => s.id === stateId);
+          if (stateNode) {
+            stateNode.position = position;
+            state.project.updatedAt = new Date().toISOString();
+          }
+        }
+      }),
+      
+      addTransition: (topicId, from, to, label, kind = 'normal') => set((state) => {
+        const topicData = state.project.topics.find(t => t.topic.id === topicId);
+        if (topicData) {
+          const transition: Transition = {
+            id: uuidv4(),
+            from,
+            to,
+            label,
+            kind,
+          };
+          topicData.transitions.push(transition);
+          state.project.updatedAt = new Date().toISOString();
+        }
+      }),
+      
+      updateTransition: (topicId, transitionId, updates) => set((state) => {
+        const topicData = state.project.topics.find(t => t.topic.id === topicId);
+        if (topicData) {
+          const transition = topicData.transitions.find(t => t.id === transitionId);
+          if (transition) {
+            Object.assign(transition, updates);
+            state.project.updatedAt = new Date().toISOString();
+          }
+        }
+      }),
+      
+      deleteTransition: (topicId, transitionId) => set((state) => {
+        const topicData = state.project.topics.find(t => t.topic.id === topicId);
+        if (topicData) {
+          topicData.transitions = topicData.transitions.filter(t => t.id !== transitionId);
+          state.project.updatedAt = new Date().toISOString();
+        }
+      }),
+      
+      selectElement: (elementId, elementType) => set((state) => {
+        state.selectedElementId = elementId;
+        state.selectedElementType = elementType;
+      }),
+      
+      setViewMode: (mode) => set((state) => {
+        state.viewMode = mode;
+      }),
+      
+      exportProject: () => {
+        return JSON.stringify(get().project, null, 2);
+      },
+      
+      importProject: (json) => {
+        try {
+          const project = JSON.parse(json) as DiagramProject;
+          set({ project, selectedElementId: null, selectedElementType: null });
+          return true;
+        } catch {
+          return false;
+        }
+      },
+      
+      resetProject: () => set({
+        project: createDefaultProject(),
+        selectedElementId: null,
+        selectedElementType: null,
+        viewMode: 'topic',
+      }),
+    })),
+    {
+      name: 'diagram-project',
+    }
+  )
+);
