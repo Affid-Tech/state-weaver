@@ -147,12 +147,17 @@ function DiagramCanvasInner() {
           transition,
           isSelected: selectedElementId === transition.id && selectedElementType === 'transition',
           onSelect: handleEdgeSelect,
+          onUpdateRouting: (curveOffset: number) => {
+            if (project.selectedTopicId) {
+              updateTransitionRouting(project.selectedTopicId, transition.id, undefined, undefined, curveOffset);
+            }
+          },
           edgeIndex: indexInfo.index,
           totalEdges: indexInfo.total,
         },
       };
     });
-  }, [selectedTopicData, selectedElementId, selectedElementType, handleEdgeSelect, edgeIndices]);
+  }, [selectedTopicData, selectedElementId, selectedElementType, handleEdgeSelect, edgeIndices, project.selectedTopicId, updateTransitionRouting]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
