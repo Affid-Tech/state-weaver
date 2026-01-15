@@ -92,10 +92,15 @@ export function Combobox({
           </span>
           <div className="flex items-center gap-1 ml-2">
             {allowClear && value && (
-              <X
-                className="h-4 w-4 shrink-0 opacity-50 hover:opacity-100"
+              <span
+                role="button"
+                tabIndex={0}
+                className="h-4 w-4 shrink-0 opacity-50 hover:opacity-100 cursor-pointer"
                 onClick={handleClear}
-              />
+                onKeyDown={(e) => e.key === 'Enter' && handleClear(e as any)}
+              >
+                <X className="h-4 w-4" />
+              </span>
             )}
             <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
           </div>
