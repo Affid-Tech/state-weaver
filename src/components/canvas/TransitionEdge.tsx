@@ -36,6 +36,21 @@ function isEndTransition(kind: TransitionKind): boolean {
   return kind === 'endTopic' || kind === 'endInstrument';
 }
 
+// Estimate node size for self-loop calculations
+const NODE_WIDTH = 120;
+const NODE_HEIGHT = 50;
+
+// Get offset direction based on handle side
+function getHandleOffset(side: string): { dx: number; dy: number } {
+  switch (side) {
+    case 'top': return { dx: 0, dy: -NODE_HEIGHT / 2 };
+    case 'bottom': return { dx: 0, dy: NODE_HEIGHT / 2 };
+    case 'left': return { dx: -NODE_WIDTH / 2, dy: 0 };
+    case 'right': return { dx: NODE_WIDTH / 2, dy: 0 };
+    default: return { dx: NODE_WIDTH / 2, dy: 0 };
+  }
+}
+
 // Generate path with better separation for multiple edges
 function generatePath(
   sourceX: number,
@@ -50,75 +65,81 @@ function generatePath(
   manualCurveOffset: number = 0
 ): { path: string; labelX: number; labelY: number } {
   const offsetMultiplier = totalEdges > 1 ? (edgeIndex - (totalEdges - 1) / 2) : 0;
-  const baseLoopSize = 70 + edgeIndex * 40 + Math.abs(manualCurveOffset);
+  const baseLoopSize = 60 + edgeIndex * 35 + Math.abs(manualCurveOffset) * 0.5;
   
   if (isSelfLoop) {
     const srcSide = sourceHandle?.replace('-source', '') || 'right';
     const tgtSide = targetHandle?.replace('-target', '') || 'right';
     
+    // Calculate actual edge start/end points at node boundary
+    const srcOffset = getHandleOffset(srcSide);
+    const tgtOffset = getHandleOffset(tgtSide);
+    const startX = sourceX + srcOffset.dx;
+    const startY = sourceY + srcOffset.dy;
+    const endX = targetX + tgtOffset.dx;
+    const endY = targetY + tgtOffset.dy;
+    
+    const loopSize = baseLoopSize;
+    let path: string;
+    let labelX: number, labelY: number;
+    
     // Same side loops: curve outward on that side
     if (srcSide === tgtSide) {
-      const loopSize = baseLoopSize;
-      let path: string;
-      let labelX: number, labelY: number;
-      
       switch (srcSide) {
         case 'right':
-          path = `M ${sourceX} ${sourceY} C ${sourceX + loopSize} ${sourceY - loopSize/2}, ${sourceX + loopSize} ${targetY + loopSize/2}, ${targetX} ${targetY}`;
-          labelX = sourceX + loopSize + 10;
-          labelY = (sourceY + targetY) / 2;
+          path = `M ${startX} ${startY} C ${startX + loopSize} ${startY - loopSize * 0.6}, ${endX + loopSize} ${endY + loopSize * 0.6}, ${endX} ${endY}`;
+          labelX = startX + loopSize + 15;
+          labelY = (startY + endY) / 2;
           break;
         case 'left':
-          path = `M ${sourceX} ${sourceY} C ${sourceX - loopSize} ${sourceY - loopSize/2}, ${sourceX - loopSize} ${targetY + loopSize/2}, ${targetX} ${targetY}`;
-          labelX = sourceX - loopSize - 10;
-          labelY = (sourceY + targetY) / 2;
+          path = `M ${startX} ${startY} C ${startX - loopSize} ${startY - loopSize * 0.6}, ${endX - loopSize} ${endY + loopSize * 0.6}, ${endX} ${endY}`;
+          labelX = startX - loopSize - 15;
+          labelY = (startY + endY) / 2;
           break;
         case 'top':
-          path = `M ${sourceX} ${sourceY} C ${sourceX - loopSize/2} ${sourceY - loopSize}, ${targetX + loopSize/2} ${targetY - loopSize}, ${targetX} ${targetY}`;
-          labelX = (sourceX + targetX) / 2;
-          labelY = sourceY - loopSize - 10;
+          path = `M ${startX} ${startY} C ${startX - loopSize * 0.6} ${startY - loopSize}, ${endX + loopSize * 0.6} ${endY - loopSize}, ${endX} ${endY}`;
+          labelX = (startX + endX) / 2;
+          labelY = startY - loopSize - 15;
           break;
         case 'bottom':
-          path = `M ${sourceX} ${sourceY} C ${sourceX - loopSize/2} ${sourceY + loopSize}, ${targetX + loopSize/2} ${targetY + loopSize}, ${targetX} ${targetY}`;
-          labelX = (sourceX + targetX) / 2;
-          labelY = sourceY + loopSize + 10;
+          path = `M ${startX} ${startY} C ${startX - loopSize * 0.6} ${startY + loopSize}, ${endX + loopSize * 0.6} ${endY + loopSize}, ${endX} ${endY}`;
+          labelX = (startX + endX) / 2;
+          labelY = startY + loopSize + 15;
           break;
         default:
-          path = `M ${sourceX} ${sourceY} C ${sourceX + loopSize} ${sourceY - loopSize/2}, ${sourceX + loopSize} ${targetY + loopSize/2}, ${targetX} ${targetY}`;
-          labelX = sourceX + loopSize + 10;
-          labelY = (sourceY + targetY) / 2;
+          path = `M ${startX} ${startY} C ${startX + loopSize} ${startY - loopSize * 0.6}, ${endX + loopSize} ${endY + loopSize * 0.6}, ${endX} ${endY}`;
+          labelX = startX + loopSize + 15;
+          labelY = (startY + endY) / 2;
       }
       return { path, labelX, labelY };
     }
     
     // Cross-side loops: go around the block
-    const arcSize = baseLoopSize * 1.2;
-    let path: string;
-    let labelX: number, labelY: number;
+    const arcSize = loopSize * 1.3;
     
     // Left-Right or Right-Left: arc over/under the block
     if ((srcSide === 'left' && tgtSide === 'right') || (srcSide === 'right' && tgtSide === 'left')) {
       const goOver = manualCurveOffset >= 0;
-      const yDir = goOver ? -1 : 1;
-      path = `M ${sourceX} ${sourceY} C ${sourceX} ${sourceY + yDir * arcSize}, ${targetX} ${targetY + yDir * arcSize}, ${targetX} ${targetY}`;
-      labelX = (sourceX + targetX) / 2;
-      labelY = sourceY + yDir * (arcSize + 15);
+      const yOffset = arcSize * (goOver ? -1 : 1);
+      path = `M ${startX} ${startY} C ${startX} ${startY + yOffset}, ${endX} ${endY + yOffset}, ${endX} ${endY}`;
+      labelX = (startX + endX) / 2;
+      labelY = startY + yOffset + (goOver ? -15 : 15);
     }
     // Top-Bottom or Bottom-Top: arc left/right of the block
     else if ((srcSide === 'top' && tgtSide === 'bottom') || (srcSide === 'bottom' && tgtSide === 'top')) {
       const goLeft = manualCurveOffset >= 0;
-      const xDir = goLeft ? -1 : 1;
-      path = `M ${sourceX} ${sourceY} C ${sourceX + xDir * arcSize} ${sourceY}, ${targetX + xDir * arcSize} ${targetY}, ${targetX} ${targetY}`;
-      labelX = sourceX + xDir * (arcSize + 15);
-      labelY = (sourceY + targetY) / 2;
+      const xOffset = arcSize * (goLeft ? -1 : 1);
+      path = `M ${startX} ${startY} C ${startX + xOffset} ${startY}, ${endX + xOffset} ${endY}, ${endX} ${endY}`;
+      labelX = startX + xOffset + (goLeft ? -15 : 15);
+      labelY = (startY + endY) / 2;
     }
-    // Adjacent sides (top-left, top-right, bottom-left, bottom-right): corner arc
+    // Adjacent sides: corner arc curving outward
     else {
-      const ctrl1X = srcSide === 'left' ? sourceX - arcSize : srcSide === 'right' ? sourceX + arcSize : sourceX;
-      const ctrl1Y = srcSide === 'top' ? sourceY - arcSize : srcSide === 'bottom' ? sourceY + arcSize : sourceY;
-      const ctrl2X = tgtSide === 'left' ? targetX - arcSize : tgtSide === 'right' ? targetX + arcSize : targetX;
-      const ctrl2Y = tgtSide === 'top' ? targetY - arcSize : tgtSide === 'bottom' ? targetY + arcSize : targetY;
-      path = `M ${sourceX} ${sourceY} C ${ctrl1X} ${ctrl1Y}, ${ctrl2X} ${ctrl2Y}, ${targetX} ${targetY}`;
+      const ctrl1X = srcSide === 'left' ? startX - arcSize : srcSide === 'right' ? startX + arcSize : startX;
+      const ctrl1Y = srcSide === 'top' ? startY - arcSize : srcSide === 'bottom' ? startY + arcSize : startY;
+      const ctrl2X = tgtSide === 'left' ? endX - arcSize : tgtSide === 'right' ? endX + arcSize : endX;
+      const ctrl2Y = tgtSide === 'top' ? endY - arcSize : tgtSide === 'bottom' ? endY + arcSize : endY;
+      path = `M ${startX} ${startY} C ${ctrl1X} ${ctrl1Y}, ${ctrl2X} ${ctrl2Y}, ${endX} ${endY}`;
       labelX = (ctrl1X + ctrl2X) / 2;
       labelY = (ctrl1Y + ctrl2Y) / 2;
     }
