@@ -195,20 +195,7 @@ export const useDiagramStore = create<DiagramState>()(
       }),
       
       createTopic: (id, kind, label) => set((state) => {
-        const existingRoot = state.project.topics.find(t => t.topic.kind === 'root');
-        if (kind === 'root' && existingRoot) {
-          // Change existing root to normal
-          existingRoot.topic.kind = 'normal';
-          // Update system nodes for the existing root
-          const startNode = existingRoot.states.find(s => s.systemNodeType === 'NewInstrument');
-          if (startNode) {
-            startNode.id = 'TopicStart';
-            startNode.label = 'Topic Start';
-            startNode.stereotype = 'Start';
-            startNode.systemNodeType = 'TopicStart';
-          }
-        }
-        
+        // Multiple root topics are now allowed - no demotion of existing roots
         const topicData: TopicData = {
           topic: { id, kind, label },
           states: createSystemNodes(kind),
@@ -242,52 +229,55 @@ export const useDiagramStore = create<DiagramState>()(
       }),
       
       setRootTopic: (topicId) => set((state) => {
-        state.project.topics.forEach(t => {
-          if (t.topic.id === topicId) {
-            t.topic.kind = 'root';
-            // Update system nodes and reassign transitions
-            const startNode = t.states.find(s => s.systemNodeType === 'TopicStart');
-            if (startNode) {
-              const oldId = startNode.id;
-              startNode.id = 'NewInstrument';
-              startNode.label = 'New Instrument';
-              startNode.stereotype = 'NewInstrument';
-              startNode.systemNodeType = 'NewInstrument';
-              // Reassign transitions
-              t.transitions.forEach(tr => {
-                if (tr.from === oldId) tr.from = 'NewInstrument';
-                if (tr.to === oldId) tr.to = 'NewInstrument';
-              });
-              // Recalculate kinds
-              t.transitions.forEach(tr => {
-                const fromState = t.states.find(s => s.id === tr.from);
-                const toState = t.states.find(s => s.id === tr.to);
-                tr.kind = deriveTransitionKind(fromState, toState);
-              });
-            }
-          } else if (t.topic.kind === 'root') {
-            t.topic.kind = 'normal';
-            const startNode = t.states.find(s => s.systemNodeType === 'NewInstrument');
-            if (startNode) {
-              const oldId = startNode.id;
-              startNode.id = 'TopicStart';
-              startNode.label = 'Topic Start';
-              startNode.stereotype = 'Start';
-              startNode.systemNodeType = 'TopicStart';
-              // Reassign transitions
-              t.transitions.forEach(tr => {
-                if (tr.from === oldId) tr.from = 'TopicStart';
-                if (tr.to === oldId) tr.to = 'TopicStart';
-              });
-              // Recalculate kinds
-              t.transitions.forEach(tr => {
-                const fromState = t.states.find(s => s.id === tr.from);
-                const toState = t.states.find(s => s.id === tr.to);
-                tr.kind = deriveTransitionKind(fromState, toState);
-              });
-            }
+        // Toggle root status for this topic only (multiple roots allowed)
+        const topicData = state.project.topics.find(t => t.topic.id === topicId);
+        if (!topicData) return;
+        
+        if (topicData.topic.kind === 'root') {
+          // Demote to normal
+          topicData.topic.kind = 'normal';
+          const startNode = topicData.states.find(s => s.systemNodeType === 'NewInstrument');
+          if (startNode) {
+            const oldId = startNode.id;
+            startNode.id = 'TopicStart';
+            startNode.label = 'Topic Start';
+            startNode.stereotype = 'Start';
+            startNode.systemNodeType = 'TopicStart';
+            // Reassign transitions
+            topicData.transitions.forEach(tr => {
+              if (tr.from === oldId) tr.from = 'TopicStart';
+              if (tr.to === oldId) tr.to = 'TopicStart';
+            });
+            // Recalculate kinds
+            topicData.transitions.forEach(tr => {
+              const fromState = topicData.states.find(s => s.id === tr.from);
+              const toState = topicData.states.find(s => s.id === tr.to);
+              tr.kind = deriveTransitionKind(fromState, toState);
+            });
           }
-        });
+        } else {
+          // Promote to root
+          topicData.topic.kind = 'root';
+          const startNode = topicData.states.find(s => s.systemNodeType === 'TopicStart');
+          if (startNode) {
+            const oldId = startNode.id;
+            startNode.id = 'NewInstrument';
+            startNode.label = 'New Instrument';
+            startNode.stereotype = 'NewInstrument';
+            startNode.systemNodeType = 'NewInstrument';
+            // Reassign transitions
+            topicData.transitions.forEach(tr => {
+              if (tr.from === oldId) tr.from = 'NewInstrument';
+              if (tr.to === oldId) tr.to = 'NewInstrument';
+            });
+            // Recalculate kinds
+            topicData.transitions.forEach(tr => {
+              const fromState = topicData.states.find(s => s.id === tr.from);
+              const toState = topicData.states.find(s => s.id === tr.to);
+              tr.kind = deriveTransitionKind(fromState, toState);
+            });
+          }
+        }
         state.project.updatedAt = new Date().toISOString();
       }),
       
