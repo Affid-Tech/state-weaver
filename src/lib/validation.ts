@@ -1,4 +1,5 @@
-import type { DiagramProject, TopicData, ValidationIssue, RESERVED_NODE_NAMES } from '@/types/diagram';
+import type { DiagramProject, TopicData, ValidationIssue, Transition } from '@/types/diagram';
+import type { FieldConfig } from '@/types/fieldConfig';
 import { v4 as uuidv4 } from 'uuid';
 
 const RESERVED_NAMES: readonly string[] = [
@@ -6,29 +7,65 @@ const RESERVED_NAMES: readonly string[] = [
   'TopicStart', 'TopicEnd'
 ];
 
-const VALID_ID_REGEX = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
+// Java enum naming convention: starts with letter, only letters/numbers/underscores
+const JAVA_ENUM_PATTERN = /^[A-Za-z][A-Za-z0-9_]*$/;
 
-export function validateProject(project: DiagramProject): ValidationIssue[] {
+export function isValidEnumName(value: string): boolean {
+  return JAVA_ENUM_PATTERN.test(value);
+}
+
+export function validateProject(project: DiagramProject, fieldConfig?: FieldConfig): ValidationIssue[] {
   const issues: ValidationIssue[] = [];
 
-  // Validate instrument
+  // Validate instrument ID
   if (!project.instrument.id || project.instrument.id.trim() === '') {
     issues.push({
       id: uuidv4(),
       level: 'error',
       message: 'Instrument ID is required',
     });
-  } else if (!VALID_ID_REGEX.test(project.instrument.id)) {
+  } else if (!isValidEnumName(project.instrument.id)) {
     issues.push({
       id: uuidv4(),
       level: 'error',
-      message: `Instrument ID "${project.instrument.id}" contains invalid characters`,
+      message: `Instrument ID "${project.instrument.id}" must follow Java enum naming (letters, numbers, underscores only)`,
     });
+  } else if (fieldConfig?.instrumentTypes && fieldConfig.instrumentTypes.length > 0) {
+    if (!fieldConfig.instrumentTypes.includes(project.instrument.id)) {
+      issues.push({
+        id: uuidv4(),
+        level: 'warning',
+        message: `Instrument ID "${project.instrument.id}" is not in configured instrument types`,
+      });
+    }
+  }
+
+  // Validate instrument revision (required)
+  if (!project.instrument.revision || project.instrument.revision.trim() === '') {
+    issues.push({
+      id: uuidv4(),
+      level: 'error',
+      message: 'Instrument revision is required',
+    });
+  } else if (!isValidEnumName(project.instrument.revision)) {
+    issues.push({
+      id: uuidv4(),
+      level: 'error',
+      message: `Instrument revision "${project.instrument.revision}" must follow Java enum naming`,
+    });
+  } else if (fieldConfig?.revisions && fieldConfig.revisions.length > 0) {
+    if (!fieldConfig.revisions.includes(project.instrument.revision)) {
+      issues.push({
+        id: uuidv4(),
+        level: 'warning',
+        message: `Instrument revision "${project.instrument.revision}" is not in configured revisions`,
+      });
+    }
   }
 
   // Validate each topic
   project.topics.forEach((topicData) => {
-    issues.push(...validateTopic(topicData, project.instrument.id));
+    issues.push(...validateTopic(topicData, project.instrument.id, fieldConfig));
   });
 
   // Check for exactly one root topic (warning if none)
@@ -44,7 +81,7 @@ export function validateProject(project: DiagramProject): ValidationIssue[] {
   return issues;
 }
 
-function validateTopic(topicData: TopicData, instrumentId: string): ValidationIssue[] {
+function validateTopic(topicData: TopicData, instrumentId: string, fieldConfig?: FieldConfig): ValidationIssue[] {
   const issues: ValidationIssue[] = [];
   const { topic, states, transitions } = topicData;
 
@@ -56,13 +93,29 @@ function validateTopic(topicData: TopicData, instrumentId: string): ValidationIs
       message: 'Topic ID is required',
       topicId: topic.id,
     });
-  } else if (!VALID_ID_REGEX.test(topic.id)) {
+  } else if (!isValidEnumName(topic.id)) {
     issues.push({
       id: uuidv4(),
       level: 'error',
-      message: `Topic ID "${topic.id}" contains invalid characters`,
+      message: `Topic ID "${topic.id}" must follow Java enum naming (letters, numbers, underscores only)`,
       topicId: topic.id,
     });
+  } else if (RESERVED_NAMES.includes(topic.id)) {
+    issues.push({
+      id: uuidv4(),
+      level: 'error',
+      message: `Topic ID "${topic.id}" is a reserved name`,
+      topicId: topic.id,
+    });
+  } else if (fieldConfig?.topicTypes && fieldConfig.topicTypes.length > 0) {
+    if (!fieldConfig.topicTypes.includes(topic.id)) {
+      issues.push({
+        id: uuidv4(),
+        level: 'warning',
+        message: `Topic ID "${topic.id}" is not in configured topic types`,
+        topicId: topic.id,
+      });
+    }
   }
 
   // Validate state IDs
@@ -77,11 +130,11 @@ function validateTopic(topicData: TopicData, instrumentId: string): ValidationIs
           elementId: state.id,
           elementType: 'state',
         });
-      } else if (!VALID_ID_REGEX.test(state.id)) {
+      } else if (!isValidEnumName(state.id)) {
         issues.push({
           id: uuidv4(),
           level: 'error',
-          message: `State ID "${state.id}" contains invalid characters`,
+          message: `State ID "${state.id}" must follow Java enum naming`,
           topicId: topic.id,
           elementId: state.id,
           elementType: 'state',
@@ -182,6 +235,11 @@ function validateTopic(topicData: TopicData, instrumentId: string): ValidationIs
         elementType: 'transition',
       });
     }
+
+    // Validate transition field values against config (only for non-end transitions)
+    if (transition.kind !== 'endTopic' && transition.kind !== 'endInstrument') {
+      issues.push(...validateTransitionFields(transition, topic.id, fieldConfig));
+    }
   });
 
   // Check for orphan states (warning)
@@ -225,6 +283,151 @@ function validateTopic(topicData: TopicData, instrumentId: string): ValidationIs
       });
     }
   });
+
+  return issues;
+}
+
+function validateTransitionFields(transition: Transition, topicId: string, fieldConfig?: FieldConfig): ValidationIssue[] {
+  const issues: ValidationIssue[] = [];
+
+  // Validate revision field
+  if (transition.revision) {
+    if (!isValidEnumName(transition.revision)) {
+      issues.push({
+        id: uuidv4(),
+        level: 'warning',
+        message: `Transition revision "${transition.revision}" must follow Java enum naming`,
+        topicId,
+        elementId: transition.id,
+        elementType: 'transition',
+      });
+    } else if (fieldConfig?.revisions && fieldConfig.revisions.length > 0) {
+      if (!fieldConfig.revisions.includes(transition.revision)) {
+        issues.push({
+          id: uuidv4(),
+          level: 'warning',
+          message: `Transition revision "${transition.revision}" is not in configured revisions`,
+          topicId,
+          elementId: transition.id,
+          elementType: 'transition',
+        });
+      }
+    }
+  }
+
+  // Validate instrument field
+  if (transition.instrument) {
+    if (!isValidEnumName(transition.instrument)) {
+      issues.push({
+        id: uuidv4(),
+        level: 'warning',
+        message: `Transition instrument "${transition.instrument}" must follow Java enum naming`,
+        topicId,
+        elementId: transition.id,
+        elementType: 'transition',
+      });
+    } else if (fieldConfig?.instrumentTypes && fieldConfig.instrumentTypes.length > 0) {
+      if (!fieldConfig.instrumentTypes.includes(transition.instrument)) {
+        issues.push({
+          id: uuidv4(),
+          level: 'warning',
+          message: `Transition instrument "${transition.instrument}" is not in configured instrument types`,
+          topicId,
+          elementId: transition.id,
+          elementType: 'transition',
+        });
+      }
+    }
+  }
+
+  // Validate topic field
+  if (transition.topic) {
+    if (!isValidEnumName(transition.topic)) {
+      issues.push({
+        id: uuidv4(),
+        level: 'warning',
+        message: `Transition topic "${transition.topic}" must follow Java enum naming`,
+        topicId,
+        elementId: transition.id,
+        elementType: 'transition',
+      });
+    } else if (fieldConfig?.topicTypes && fieldConfig.topicTypes.length > 0) {
+      if (!fieldConfig.topicTypes.includes(transition.topic)) {
+        issues.push({
+          id: uuidv4(),
+          level: 'warning',
+          message: `Transition topic "${transition.topic}" is not in configured topic types`,
+          topicId,
+          elementId: transition.id,
+          elementType: 'transition',
+        });
+      }
+    }
+  }
+
+  // Validate messageType field (required)
+  if (!transition.messageType || transition.messageType.trim() === '') {
+    issues.push({
+      id: uuidv4(),
+      level: 'error',
+      message: 'Transition messageType is required',
+      topicId,
+      elementId: transition.id,
+      elementType: 'transition',
+    });
+  } else if (!isValidEnumName(transition.messageType)) {
+    issues.push({
+      id: uuidv4(),
+      level: 'warning',
+      message: `Transition messageType "${transition.messageType}" must follow Java enum naming`,
+      topicId,
+      elementId: transition.id,
+      elementType: 'transition',
+    });
+  } else if (fieldConfig?.messageTypes && fieldConfig.messageTypes.length > 0) {
+    if (!fieldConfig.messageTypes.includes(transition.messageType)) {
+      issues.push({
+        id: uuidv4(),
+        level: 'warning',
+        message: `Transition messageType "${transition.messageType}" is not in configured message types`,
+        topicId,
+        elementId: transition.id,
+        elementType: 'transition',
+      });
+    }
+  }
+
+  // Validate flowType field (required)
+  if (!transition.flowType || transition.flowType.trim() === '') {
+    issues.push({
+      id: uuidv4(),
+      level: 'error',
+      message: 'Transition flowType is required',
+      topicId,
+      elementId: transition.id,
+      elementType: 'transition',
+    });
+  } else if (!isValidEnumName(transition.flowType)) {
+    issues.push({
+      id: uuidv4(),
+      level: 'warning',
+      message: `Transition flowType "${transition.flowType}" must follow Java enum naming`,
+      topicId,
+      elementId: transition.id,
+      elementType: 'transition',
+    });
+  } else if (fieldConfig?.flowTypes && fieldConfig.flowTypes.length > 0) {
+    if (!fieldConfig.flowTypes.includes(transition.flowType)) {
+      issues.push({
+        id: uuidv4(),
+        level: 'warning',
+        message: `Transition flowType "${transition.flowType}" is not in configured flow types`,
+        topicId,
+        elementId: transition.id,
+        elementType: 'transition',
+      });
+    }
+  }
 
   return issues;
 }
