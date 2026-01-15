@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Slider } from '@/components/ui/slider';
 import {
   Select,
   SelectContent,
@@ -29,6 +30,13 @@ import type { FlowType } from '@/types/diagram';
 
 const FLOW_TYPES: FlowType[] = ['B2B', 'B2C', 'C2B', 'C2C'];
 const REVISIONS = ['R1', 'R2', 'R3'];
+const HANDLE_SIDES = [
+  { value: 'top', label: 'Top' },
+  { value: 'bottom', label: 'Bottom' },
+  { value: 'left', label: 'Left' },
+  { value: 'right', label: 'Right' },
+];
+
 
 function getTransitionKindLabel(kind: string): string {
   switch (kind) {
@@ -50,6 +58,7 @@ export function InspectorPanel() {
     updateState,
     deleteState,
     updateTransition,
+    updateTransitionRouting,
     deleteTransition,
     selectElement,
   } = useDiagramStore();
@@ -410,9 +419,93 @@ export function InspectorPanel() {
                     </>
                   ) : (
                     <p className="text-sm text-muted-foreground italic">
-                      End transitions have no editable properties.
+                      End transitions have no message properties.
                     </p>
                   )}
+
+                  {/* Edge Routing Controls - available for all transitions */}
+                  <div className="border-t pt-4 mt-4 space-y-4">
+                    <h4 className="text-sm font-medium text-muted-foreground">Edge Routing</h4>
+                    
+                    <div className="space-y-2">
+                      <Label>Source Side</Label>
+                      <Select
+                        value={selectedTransition.sourceHandleId?.replace('source-', '') || 'bottom'}
+                        onValueChange={(v) => {
+                          if (project.selectedTopicId) {
+                            updateTransitionRouting(
+                              project.selectedTopicId, 
+                              selectedTransition.id, 
+                              `source-${v}`,
+                              undefined,
+                              undefined
+                            );
+                          }
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {HANDLE_SIDES.map((side) => (
+                            <SelectItem key={side.value} value={side.value}>{side.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Target Side</Label>
+                      <Select
+                        value={selectedTransition.targetHandleId?.replace('target-', '') || 'top'}
+                        onValueChange={(v) => {
+                          if (project.selectedTopicId) {
+                            updateTransitionRouting(
+                              project.selectedTopicId, 
+                              selectedTransition.id, 
+                              undefined,
+                              `target-${v}`,
+                              undefined
+                            );
+                          }
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {HANDLE_SIDES.map((side) => (
+                            <SelectItem key={side.value} value={side.value}>{side.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Curve Offset: {selectedTransition.curveOffset ?? 0}</Label>
+                      <Slider
+                        value={[selectedTransition.curveOffset ?? 0]}
+                        onValueChange={(values) => {
+                          if (project.selectedTopicId) {
+                            updateTransitionRouting(
+                              project.selectedTopicId, 
+                              selectedTransition.id, 
+                              undefined,
+                              undefined,
+                              values[0]
+                            );
+                          }
+                        }}
+                        min={-150}
+                        max={150}
+                        step={5}
+                        className="w-full"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Adjust to move the curve left (-) or right (+)
+                      </p>
+                    </div>
+                  </div>
                 </div>
               )}
 
