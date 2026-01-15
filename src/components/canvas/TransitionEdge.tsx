@@ -49,31 +49,84 @@ function generatePath(
   totalEdges: number = 1,
   manualCurveOffset: number = 0
 ): { path: string; labelX: number; labelY: number } {
-  // Calculate offset multiplier - spread edges apart, plus manual offset
   const offsetMultiplier = totalEdges > 1 ? (edgeIndex - (totalEdges - 1) / 2) : 0;
-  const baseOffset = offsetMultiplier * 60 + manualCurveOffset; // Add manual curve offset
+  const baseLoopSize = 70 + edgeIndex * 40 + Math.abs(manualCurveOffset);
   
   if (isSelfLoop) {
-    // Self-loop: create distinctive loops on the right side
-    // Each loop gets progressively larger and more offset, plus manual adjustment
-    const loopWidth = 80 + edgeIndex * 50 + Math.abs(manualCurveOffset);
-    const loopHeight = 60 + edgeIndex * 40;
-    const verticalOffset = edgeIndex * 25 + manualCurveOffset * 0.5;
+    const srcSide = sourceHandle?.replace('-source', '') || 'right';
+    const tgtSide = targetHandle?.replace('-target', '') || 'right';
     
-    // Start from right side of node, loop out and back
-    const path = `M ${sourceX} ${sourceY} 
-                  C ${sourceX + loopWidth} ${sourceY - loopHeight - verticalOffset}, 
-                    ${sourceX + loopWidth} ${sourceY + loopHeight + verticalOffset}, 
-                    ${targetX} ${targetY}`;
+    // Same side loops: curve outward on that side
+    if (srcSide === tgtSide) {
+      const loopSize = baseLoopSize;
+      let path: string;
+      let labelX: number, labelY: number;
+      
+      switch (srcSide) {
+        case 'right':
+          path = `M ${sourceX} ${sourceY} C ${sourceX + loopSize} ${sourceY - loopSize/2}, ${sourceX + loopSize} ${targetY + loopSize/2}, ${targetX} ${targetY}`;
+          labelX = sourceX + loopSize + 10;
+          labelY = (sourceY + targetY) / 2;
+          break;
+        case 'left':
+          path = `M ${sourceX} ${sourceY} C ${sourceX - loopSize} ${sourceY - loopSize/2}, ${sourceX - loopSize} ${targetY + loopSize/2}, ${targetX} ${targetY}`;
+          labelX = sourceX - loopSize - 10;
+          labelY = (sourceY + targetY) / 2;
+          break;
+        case 'top':
+          path = `M ${sourceX} ${sourceY} C ${sourceX - loopSize/2} ${sourceY - loopSize}, ${targetX + loopSize/2} ${targetY - loopSize}, ${targetX} ${targetY}`;
+          labelX = (sourceX + targetX) / 2;
+          labelY = sourceY - loopSize - 10;
+          break;
+        case 'bottom':
+          path = `M ${sourceX} ${sourceY} C ${sourceX - loopSize/2} ${sourceY + loopSize}, ${targetX + loopSize/2} ${targetY + loopSize}, ${targetX} ${targetY}`;
+          labelX = (sourceX + targetX) / 2;
+          labelY = sourceY + loopSize + 10;
+          break;
+        default:
+          path = `M ${sourceX} ${sourceY} C ${sourceX + loopSize} ${sourceY - loopSize/2}, ${sourceX + loopSize} ${targetY + loopSize/2}, ${targetX} ${targetY}`;
+          labelX = sourceX + loopSize + 10;
+          labelY = (sourceY + targetY) / 2;
+      }
+      return { path, labelX, labelY };
+    }
     
-    return {
-      path,
-      labelX: sourceX + loopWidth + 15,
-      labelY: sourceY + verticalOffset,
-    };
+    // Cross-side loops: go around the block
+    const arcSize = baseLoopSize * 1.2;
+    let path: string;
+    let labelX: number, labelY: number;
+    
+    // Left-Right or Right-Left: arc over/under the block
+    if ((srcSide === 'left' && tgtSide === 'right') || (srcSide === 'right' && tgtSide === 'left')) {
+      const goOver = manualCurveOffset >= 0;
+      const yDir = goOver ? -1 : 1;
+      path = `M ${sourceX} ${sourceY} C ${sourceX} ${sourceY + yDir * arcSize}, ${targetX} ${targetY + yDir * arcSize}, ${targetX} ${targetY}`;
+      labelX = (sourceX + targetX) / 2;
+      labelY = sourceY + yDir * (arcSize + 15);
+    }
+    // Top-Bottom or Bottom-Top: arc left/right of the block
+    else if ((srcSide === 'top' && tgtSide === 'bottom') || (srcSide === 'bottom' && tgtSide === 'top')) {
+      const goLeft = manualCurveOffset >= 0;
+      const xDir = goLeft ? -1 : 1;
+      path = `M ${sourceX} ${sourceY} C ${sourceX + xDir * arcSize} ${sourceY}, ${targetX + xDir * arcSize} ${targetY}, ${targetX} ${targetY}`;
+      labelX = sourceX + xDir * (arcSize + 15);
+      labelY = (sourceY + targetY) / 2;
+    }
+    // Adjacent sides (top-left, top-right, bottom-left, bottom-right): corner arc
+    else {
+      const ctrl1X = srcSide === 'left' ? sourceX - arcSize : srcSide === 'right' ? sourceX + arcSize : sourceX;
+      const ctrl1Y = srcSide === 'top' ? sourceY - arcSize : srcSide === 'bottom' ? sourceY + arcSize : sourceY;
+      const ctrl2X = tgtSide === 'left' ? targetX - arcSize : tgtSide === 'right' ? targetX + arcSize : targetX;
+      const ctrl2Y = tgtSide === 'top' ? targetY - arcSize : tgtSide === 'bottom' ? targetY + arcSize : targetY;
+      path = `M ${sourceX} ${sourceY} C ${ctrl1X} ${ctrl1Y}, ${ctrl2X} ${ctrl2Y}, ${targetX} ${targetY}`;
+      labelX = (ctrl1X + ctrl2X) / 2;
+      labelY = (ctrl1Y + ctrl2Y) / 2;
+    }
+    
+    return { path, labelX, labelY };
   }
 
-  // Calculate direction vector
+  // Non-self-loop: regular curved edge
   const dx = targetX - sourceX;
   const dy = targetY - sourceY;
   const distance = Math.sqrt(dx * dx + dy * dy);
@@ -82,36 +135,23 @@ function generatePath(
     return { path: `M ${sourceX} ${sourceY} L ${targetX} ${targetY}`, labelX: sourceX, labelY: sourceY };
   }
   
-  // Perpendicular vector for offset
   const perpX = -dy / distance;
   const perpY = dx / distance;
   
-  // Calculate total offset: auto offset for multiple edges + manual offset
-  // Manual offset directly controls direction (negative = flip side)
   const autoOffset = offsetMultiplier * 60;
   const totalOffset = autoOffset + manualCurveOffset;
-  
-  // Base curvature that scales with distance
   const baseCurvature = Math.min(60, Math.max(25, distance * 0.15));
-  
-  // Final curvature: base + absolute offset value, direction from sign
   const curvature = baseCurvature + Math.abs(totalOffset) * 0.5;
   const direction = totalOffset !== 0 ? Math.sign(totalOffset) : 1;
   
-  // Control point
   const midX = (sourceX + targetX) / 2;
   const midY = (sourceY + targetY) / 2;
   const ctrlX = midX + perpX * curvature * direction;
   const ctrlY = midY + perpY * curvature * direction;
   
-  // Quadratic bezier curve
   const path = `M ${sourceX} ${sourceY} Q ${ctrlX} ${ctrlY} ${targetX} ${targetY}`;
   
-  return {
-    path,
-    labelX: ctrlX,
-    labelY: ctrlY,
-  };
+  return { path, labelX: ctrlX, labelY: ctrlY };
 }
 
 export const TransitionEdge = memo(({
