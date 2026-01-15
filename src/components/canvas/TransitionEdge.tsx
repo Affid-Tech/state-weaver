@@ -2,7 +2,6 @@ import { memo } from 'react';
 import {
   BaseEdge,
   EdgeLabelRenderer,
-  getBezierPath,
   type EdgeProps,
 } from '@xyflow/react';
 import { cn } from '@/lib/utils';
@@ -24,25 +23,76 @@ function getTransitionLabel(transition: Transition): string {
   return parts.join('.');
 }
 
+// Generate a curved path that handles self-loops and bidirectional edges nicely
+function generateCurvedPath(
+  sourceX: number,
+  sourceY: number,
+  targetX: number,
+  targetY: number,
+  isSelfLoop: boolean
+): { path: string; labelX: number; labelY: number } {
+  if (isSelfLoop) {
+    // Self-loop: create a loop on the right side of the node
+    const loopSize = 60;
+    const path = `M ${sourceX} ${sourceY} 
+                  C ${sourceX + loopSize} ${sourceY - loopSize}, 
+                    ${sourceX + loopSize} ${sourceY + loopSize}, 
+                    ${targetX} ${targetY}`;
+    return {
+      path,
+      labelX: sourceX + loopSize + 10,
+      labelY: sourceY,
+    };
+  }
+
+  // Calculate distance and midpoint
+  const dx = targetX - sourceX;
+  const dy = targetY - sourceY;
+  const distance = Math.sqrt(dx * dx + dy * dy);
+  
+  // Calculate perpendicular offset for the curve
+  // More offset for closer nodes to avoid overlap
+  const curvature = Math.min(50, Math.max(20, distance * 0.15));
+  
+  // Perpendicular vector (normalized)
+  const perpX = -dy / distance;
+  const perpY = dx / distance;
+  
+  // Control point offset
+  const midX = (sourceX + targetX) / 2;
+  const midY = (sourceY + targetY) / 2;
+  const ctrlX = midX + perpX * curvature;
+  const ctrlY = midY + perpY * curvature;
+  
+  // Quadratic bezier curve
+  const path = `M ${sourceX} ${sourceY} Q ${ctrlX} ${ctrlY} ${targetX} ${targetY}`;
+  
+  return {
+    path,
+    labelX: ctrlX,
+    labelY: ctrlY,
+  };
+}
+
 export const TransitionEdge = memo(({
   id,
   sourceX,
   sourceY,
   targetX,
   targetY,
-  sourcePosition,
-  targetPosition,
+  source,
+  target,
   data,
   selected,
 }: EdgeProps) => {
-  const [edgePath, labelX, labelY] = getBezierPath({
+  const isSelfLoop = source === target;
+  const { path: edgePath, labelX, labelY } = generateCurvedPath(
     sourceX,
     sourceY,
-    sourcePosition,
     targetX,
     targetY,
-    targetPosition,
-  });
+    isSelfLoop
+  );
 
   const edgeData = data as unknown as TransitionEdgeData | undefined;
   const transition = edgeData?.transition;

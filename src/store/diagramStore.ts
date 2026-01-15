@@ -37,6 +37,7 @@ interface DiagramState {
   // State actions
   addState: (topicId: string, id: string, label?: string, position?: Position) => void;
   addInstrumentEnd: (topicId: string) => void;
+  addTopicEnd: (topicId: string) => void;
   updateState: (topicId: string, stateId: string, updates: Partial<StateNode>) => void;
   deleteState: (topicId: string, stateId: string) => void;
   updateStatePosition: (topicId: string, stateId: string, position: Position) => void;
@@ -243,22 +244,46 @@ export const useDiagramStore = create<DiagramState>()(
         state.project.topics.forEach(t => {
           if (t.topic.id === topicId) {
             t.topic.kind = 'root';
-            // Update system nodes
+            // Update system nodes and reassign transitions
             const startNode = t.states.find(s => s.systemNodeType === 'TopicStart');
             if (startNode) {
+              const oldId = startNode.id;
               startNode.id = 'NewInstrument';
               startNode.label = 'New Instrument';
               startNode.stereotype = 'NewInstrument';
               startNode.systemNodeType = 'NewInstrument';
+              // Reassign transitions
+              t.transitions.forEach(tr => {
+                if (tr.from === oldId) tr.from = 'NewInstrument';
+                if (tr.to === oldId) tr.to = 'NewInstrument';
+              });
+              // Recalculate kinds
+              t.transitions.forEach(tr => {
+                const fromState = t.states.find(s => s.id === tr.from);
+                const toState = t.states.find(s => s.id === tr.to);
+                tr.kind = deriveTransitionKind(fromState, toState);
+              });
             }
           } else if (t.topic.kind === 'root') {
             t.topic.kind = 'normal';
             const startNode = t.states.find(s => s.systemNodeType === 'NewInstrument');
             if (startNode) {
+              const oldId = startNode.id;
               startNode.id = 'TopicStart';
               startNode.label = 'Topic Start';
               startNode.stereotype = 'Start';
               startNode.systemNodeType = 'TopicStart';
+              // Reassign transitions
+              t.transitions.forEach(tr => {
+                if (tr.from === oldId) tr.from = 'TopicStart';
+                if (tr.to === oldId) tr.to = 'TopicStart';
+              });
+              // Recalculate kinds
+              t.transitions.forEach(tr => {
+                const fromState = t.states.find(s => s.id === tr.from);
+                const toState = t.states.find(s => s.id === tr.to);
+                tr.kind = deriveTransitionKind(fromState, toState);
+              });
             }
           }
         });
@@ -299,6 +324,26 @@ export const useDiagramStore = create<DiagramState>()(
           }
         }
       }),
+
+      addTopicEnd: (topicId) => set((state) => {
+        const topicData = state.project.topics.find(t => t.topic.id === topicId);
+        if (topicData) {
+          // Check if TopicEnd already exists
+          const exists = topicData.states.some(s => s.systemNodeType === 'TopicEnd');
+          if (!exists) {
+            const topicEnd: StateNode = {
+              id: 'TopicEnd',
+              label: 'Topic End',
+              stereotype: 'End',
+              position: { x: 400, y: 300 },
+              isSystemNode: true,
+              systemNodeType: 'TopicEnd',
+            };
+            topicData.states.push(topicEnd);
+            state.project.updatedAt = new Date().toISOString();
+          }
+        }
+      }),
       
       updateState: (topicId, stateId, updates) => set((state) => {
         const topicData = state.project.topics.find(t => t.topic.id === topicId);
@@ -315,7 +360,17 @@ export const useDiagramStore = create<DiagramState>()(
         const topicData = state.project.topics.find(t => t.topic.id === topicId);
         if (topicData) {
           const stateNode = topicData.states.find(s => s.id === stateId);
-          if (stateNode && !stateNode.isSystemNode) {
+          // Allow deleting InstrumentEnd if TopicEnd exists, or TopicEnd if InstrumentEnd exists
+          const isTopicEnd = stateNode?.systemNodeType === 'TopicEnd';
+          const isInstrumentEnd = stateNode?.systemNodeType === 'InstrumentEnd';
+          const hasTopicEnd = topicData.states.some(s => s.systemNodeType === 'TopicEnd');
+          const hasInstrumentEnd = topicData.states.some(s => s.systemNodeType === 'InstrumentEnd');
+          
+          const canDeleteSystemNode = 
+            (isTopicEnd && hasInstrumentEnd) || 
+            (isInstrumentEnd && hasTopicEnd);
+          
+          if (stateNode && (!stateNode.isSystemNode || canDeleteSystemNode)) {
             topicData.states = topicData.states.filter(s => s.id !== stateId);
             topicData.transitions = topicData.transitions.filter(
               t => t.from !== stateId && t.to !== stateId
