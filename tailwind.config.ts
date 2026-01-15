@@ -56,6 +56,35 @@ export default {
           "accent-foreground": "hsl(var(--sidebar-accent-foreground))",
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
+          muted: "hsl(var(--sidebar-muted))",
+          "muted-foreground": "hsl(var(--sidebar-muted-foreground))",
+        },
+        state: {
+          DEFAULT: "hsl(var(--state-default))",
+          foreground: "hsl(var(--state-default-foreground))",
+          border: "hsl(var(--state-default-border))",
+          start: "hsl(var(--state-start))",
+          "start-foreground": "hsl(var(--state-start-foreground))",
+          "start-border": "hsl(var(--state-start-border))",
+          end: "hsl(var(--state-end))",
+          "end-foreground": "hsl(var(--state-end-foreground))",
+          "end-border": "hsl(var(--state-end-border))",
+          system: "hsl(var(--state-system))",
+          "system-foreground": "hsl(var(--state-system-foreground))",
+          "system-border": "hsl(var(--state-system-border))",
+          "selected-ring": "hsl(var(--state-selected-ring))",
+        },
+        validation: {
+          error: "hsl(var(--error))",
+          "error-foreground": "hsl(var(--error-foreground))",
+          warning: "hsl(var(--warning))",
+          "warning-foreground": "hsl(var(--warning-foreground))",
+          success: "hsl(var(--success))",
+          "success-foreground": "hsl(var(--success-foreground))",
+        },
+        edge: {
+          DEFAULT: "hsl(var(--edge-default))",
+          selected: "hsl(var(--edge-selected))",
         },
       },
       borderRadius: {
@@ -65,25 +94,23 @@ export default {
       },
       keyframes: {
         "accordion-down": {
-          from: {
-            height: "0",
-          },
-          to: {
-            height: "var(--radix-accordion-content-height)",
-          },
+          from: { height: "0" },
+          to: { height: "var(--radix-accordion-content-height)" },
         },
         "accordion-up": {
-          from: {
-            height: "var(--radix-accordion-content-height)",
-          },
-          to: {
-            height: "0",
-          },
+          from: { height: "var(--radix-accordion-content-height)" },
+          to: { height: "0" },
+        },
+        "pulse-ring": {
+          "0%": { boxShadow: "0 0 0 0 hsl(var(--primary) / 0.4)" },
+          "70%": { boxShadow: "0 0 0 6px hsl(var(--primary) / 0)" },
+          "100%": { boxShadow: "0 0 0 0 hsl(var(--primary) / 0)" },
         },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
+        "pulse-ring": "pulse-ring 1.5s ease-out infinite",
       },
     },
   },
