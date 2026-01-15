@@ -11,8 +11,10 @@ import type {
   Transition, 
   TopicKind,
   TransitionKind,
+  FlowType,
   Position 
 } from '@/types/diagram';
+import { deriveTransitionKind } from '@/types/diagram';
 
 interface DiagramState {
   project: DiagramProject;
@@ -34,13 +36,14 @@ interface DiagramState {
   
   // State actions
   addState: (topicId: string, id: string, label?: string, position?: Position) => void;
+  addInstrumentEnd: (topicId: string) => void;
   updateState: (topicId: string, stateId: string, updates: Partial<StateNode>) => void;
   deleteState: (topicId: string, stateId: string) => void;
   updateStatePosition: (topicId: string, stateId: string, position: Position) => void;
   
   // Transition actions
-  addTransition: (topicId: string, from: string, to: string, label?: string, kind?: TransitionKind) => void;
-  updateTransition: (topicId: string, transitionId: string, updates: Partial<Transition>) => void;
+  addTransition: (topicId: string, from: string, to: string, messageType: string, flowType: FlowType) => string;
+  updateTransition: (topicId: string, transitionId: string, updates: Partial<Omit<Transition, 'kind'>>) => void;
   deleteTransition: (topicId: string, transitionId: string) => void;
   
   // Selection
@@ -82,6 +85,14 @@ const createSampleProject = (): DiagramProject => {
             systemNodeType: 'TopicEnd',
           },
           {
+            id: 'InstrumentEnd',
+            label: 'Instrument End',
+            stereotype: 'End',
+            position: { x: 500, y: 400 },
+            isSystemNode: true,
+            systemNodeType: 'InstrumentEnd',
+          },
+          {
             id: 'Submitted',
             label: 'Submitted',
             stereotype: 'Submitted',
@@ -104,11 +115,11 @@ const createSampleProject = (): DiagramProject => {
           },
         ],
         transitions: [
-          { id: uuidv4(), from: 'NewInstrument', to: 'Submitted', label: 'pacs.008', kind: 'startInstrument' },
-          { id: uuidv4(), from: 'Submitted', to: 'Validated', label: 'validate', kind: 'normal' },
-          { id: uuidv4(), from: 'Submitted', to: 'Rejected', label: 'reject', kind: 'normal' },
-          { id: uuidv4(), from: 'Validated', to: 'TopicEnd', label: 'complete', kind: 'endTopic' },
-          { id: uuidv4(), from: 'Rejected', to: 'TopicEnd', label: 'close', kind: 'endTopic' },
+          { id: uuidv4(), from: 'NewInstrument', to: 'Submitted', kind: 'startInstrument', messageType: 'pacs.008', flowType: 'B2B' },
+          { id: uuidv4(), from: 'Submitted', to: 'Validated', kind: 'normal', messageType: 'validate', flowType: 'B2B' },
+          { id: uuidv4(), from: 'Submitted', to: 'Rejected', kind: 'normal', messageType: 'reject', flowType: 'B2B' },
+          { id: uuidv4(), from: 'Validated', to: 'TopicEnd', kind: 'endTopic', messageType: 'complete', flowType: 'B2B' },
+          { id: uuidv4(), from: 'Rejected', to: 'InstrumentEnd', kind: 'endInstrument', messageType: 'close', flowType: 'B2B' },
         ],
       },
     ],
@@ -268,6 +279,26 @@ export const useDiagramStore = create<DiagramState>()(
           state.project.updatedAt = new Date().toISOString();
         }
       }),
+
+      addInstrumentEnd: (topicId) => set((state) => {
+        const topicData = state.project.topics.find(t => t.topic.id === topicId);
+        if (topicData) {
+          // Check if InstrumentEnd already exists
+          const exists = topicData.states.some(s => s.systemNodeType === 'InstrumentEnd');
+          if (!exists) {
+            const instrumentEnd: StateNode = {
+              id: 'InstrumentEnd',
+              label: 'Instrument End',
+              stereotype: 'End',
+              position: { x: 500, y: 300 },
+              isSystemNode: true,
+              systemNodeType: 'InstrumentEnd',
+            };
+            topicData.states.push(instrumentEnd);
+            state.project.updatedAt = new Date().toISOString();
+          }
+        }
+      }),
       
       updateState: (topicId, stateId, updates) => set((state) => {
         const topicData = state.project.topics.find(t => t.topic.id === topicId);
@@ -305,27 +336,48 @@ export const useDiagramStore = create<DiagramState>()(
         }
       }),
       
-      addTransition: (topicId, from, to, label, kind = 'normal') => set((state) => {
-        const topicData = state.project.topics.find(t => t.topic.id === topicId);
-        if (topicData) {
-          const transition: Transition = {
-            id: uuidv4(),
-            from,
-            to,
-            label,
-            kind,
-          };
-          topicData.transitions.push(transition);
-          state.project.updatedAt = new Date().toISOString();
-        }
-      }),
+      addTransition: (topicId, from, to, messageType, flowType) => {
+        let transitionId = '';
+        set((state) => {
+          const topicData = state.project.topics.find(t => t.topic.id === topicId);
+          if (topicData) {
+            const fromState = topicData.states.find(s => s.id === from);
+            const toState = topicData.states.find(s => s.id === to);
+            const kind = deriveTransitionKind(fromState, toState);
+            
+            transitionId = uuidv4();
+            const transition: Transition = {
+              id: transitionId,
+              from,
+              to,
+              kind,
+              messageType,
+              flowType,
+            };
+            topicData.transitions.push(transition);
+            state.project.updatedAt = new Date().toISOString();
+          }
+        });
+        return transitionId;
+      },
       
       updateTransition: (topicId, transitionId, updates) => set((state) => {
         const topicData = state.project.topics.find(t => t.topic.id === topicId);
         if (topicData) {
           const transition = topicData.transitions.find(t => t.id === transitionId);
           if (transition) {
-            Object.assign(transition, updates);
+            // Apply updates but recalculate kind if from/to changed
+            const { from, to, ...otherUpdates } = updates;
+            Object.assign(transition, otherUpdates);
+            
+            if (from !== undefined) transition.from = from;
+            if (to !== undefined) transition.to = to;
+            
+            // Recalculate kind based on connected states
+            const fromState = topicData.states.find(s => s.id === transition.from);
+            const toState = topicData.states.find(s => s.id === transition.to);
+            transition.kind = deriveTransitionKind(fromState, toState);
+            
             state.project.updatedAt = new Date().toISOString();
           }
         }
