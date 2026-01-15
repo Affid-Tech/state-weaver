@@ -78,6 +78,24 @@ export function InspectorPanel() {
     return selectedTopicData.states.some(s => s.systemNodeType === 'InstrumentEnd');
   }, [selectedTopicData]);
 
+  const hasTopicEnd = useMemo(() => {
+    if (!selectedTopicData) return false;
+    return selectedTopicData.states.some(s => s.systemNodeType === 'TopicEnd');
+  }, [selectedTopicData]);
+
+  // Check if the selected state can be deleted (for system nodes, only if the other end exists)
+  const canDeleteSelectedState = useMemo(() => {
+    if (!selectedState) return false;
+    if (!selectedState.isSystemNode) return true;
+    
+    // Can only delete TopicEnd if InstrumentEnd exists, and vice versa
+    if (selectedState.systemNodeType === 'TopicEnd') return hasInstrumentEnd;
+    if (selectedState.systemNodeType === 'InstrumentEnd') return hasTopicEnd;
+    
+    // Cannot delete start nodes (TopicStart, NewInstrument)
+    return false;
+  }, [selectedState, hasInstrumentEnd, hasTopicEnd]);
+
   const validationIssues = useMemo(() => validateProject(project), [project]);
   const errors = validationIssues.filter(i => i.level === 'error');
   const warnings = validationIssues.filter(i => i.level === 'warning');
@@ -95,8 +113,15 @@ export function InspectorPanel() {
     addInstrumentEnd(project.selectedTopicId);
   };
 
+  const handleAddTopicEnd = () => {
+    if (!project.selectedTopicId) return;
+    // Add Topic End node - need to add this to the store
+    useDiagramStore.getState().addTopicEnd(project.selectedTopicId);
+  };
+
   const handleDeleteState = () => {
     if (!project.selectedTopicId || !selectedElementId || selectedElementType !== 'state') return;
+    if (!canDeleteSelectedState) return;
     deleteState(project.selectedTopicId, selectedElementId);
     selectElement(null, null);
   };
@@ -187,6 +212,18 @@ export function InspectorPanel() {
                 Add Instrument End
               </Button>
             )}
+
+            {!hasTopicEnd && (
+              <Button 
+                variant="outline" 
+                className="w-full" 
+                disabled={!project.selectedTopicId}
+                onClick={handleAddTopicEnd}
+              >
+                <CircleSlash className="h-4 w-4 mr-2" />
+                Add Topic End
+              </Button>
+            )}
           </div>
 
           <ScrollArea className="flex-1">
@@ -195,7 +232,7 @@ export function InspectorPanel() {
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <h3 className="font-semibold">State Properties</h3>
-                    {!selectedState.isSystemNode && (
+                    {canDeleteSelectedState && (
                       <Button size="sm" variant="destructive" onClick={handleDeleteState}>
                         <Trash2 className="h-4 w-4" />
                       </Button>

@@ -13,6 +13,9 @@ import {
   MarkerType,
   NodeTypes,
   EdgeTypes,
+  OnEdgesChange,
+  EdgeChange,
+  reconnectEdge,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
@@ -52,6 +55,9 @@ export function DiagramCanvas() {
     selectedElementType,
     selectElement,
     addTransition,
+    updateTransition,
+    deleteTransition,
+    deleteState,
     updateStatePosition,
   } = useDiagramStore();
 
@@ -108,6 +114,34 @@ export function DiagramCanvas() {
     setEdges(initialEdges);
   }, [initialNodes, initialEdges, setNodes, setEdges]);
 
+  // Handle keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (!project.selectedTopicId) return;
+      
+      // Ignore if user is typing in an input
+      const target = event.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+        return;
+      }
+      
+      if (event.key === 'Delete' || event.key === 'Backspace') {
+        event.preventDefault();
+        
+        if (selectedElementId && selectedElementType === 'transition') {
+          deleteTransition(project.selectedTopicId, selectedElementId);
+          selectElement(null, null);
+        } else if (selectedElementId && selectedElementType === 'state') {
+          deleteState(project.selectedTopicId, selectedElementId);
+          selectElement(null, null);
+        }
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [project.selectedTopicId, selectedElementId, selectedElementType, deleteTransition, deleteState, selectElement]);
+
   const onConnect = useCallback(
     (params: Connection) => {
       if (!project.selectedTopicId || !params.source || !params.target) return;
@@ -150,6 +184,38 @@ export function DiagramCanvas() {
     selectElement(null, null);
   }, [selectElement]);
 
+  // Handle edge reconnection (detach and reattach to different nodes)
+  const onReconnect = useCallback(
+    (oldEdge: Edge, newConnection: Connection) => {
+      if (!project.selectedTopicId || !newConnection.source || !newConnection.target) return;
+      
+      // Update the transition in the store
+      updateTransition(project.selectedTopicId, oldEdge.id, {
+        from: newConnection.source,
+        to: newConnection.target,
+      });
+      
+      // Update local edges state
+      setEdges((els) => reconnectEdge(oldEdge, newConnection, els));
+    },
+    [project.selectedTopicId, updateTransition, setEdges]
+  );
+
+  // Custom edges change handler to sync deletions with store
+  const handleEdgesChange: OnEdgesChange = useCallback(
+    (changes: EdgeChange[]) => {
+      onEdgesChange(changes);
+      
+      // Handle edge removals - sync with store
+      changes.forEach((change) => {
+        if (change.type === 'remove' && project.selectedTopicId) {
+          deleteTransition(project.selectedTopicId, change.id);
+        }
+      });
+    },
+    [onEdgesChange, project.selectedTopicId, deleteTransition]
+  );
+
   if (!selectedTopicData) {
     return (
       <div className="flex-1 flex items-center justify-center bg-background">
@@ -167,8 +233,9 @@ export function DiagramCanvas() {
         nodes={nodes}
         edges={edges}
         onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
+        onEdgesChange={handleEdgesChange}
         onConnect={onConnect}
+        onReconnect={onReconnect}
         onNodeDragStop={onNodeDragStop}
         onPaneClick={onPaneClick}
         nodeTypes={nodeTypes}
@@ -176,6 +243,7 @@ export function DiagramCanvas() {
         defaultEdgeOptions={defaultEdgeOptions}
         fitView
         proOptions={{ hideAttribution: true }}
+        edgesReconnectable
       >
         <Background variant={BackgroundVariant.Dots} gap={20} size={1} />
         <Controls />
