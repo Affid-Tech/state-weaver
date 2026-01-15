@@ -1,18 +1,72 @@
+import { useState, useCallback } from 'react';
 import { TopBar } from '@/components/layout/TopBar';
 import { StructureSidebar } from '@/components/sidebar/StructureSidebar';
 import { InspectorPanel } from '@/components/sidebar/InspectorPanel';
 import { DiagramCanvas } from '@/components/canvas/DiagramCanvas';
 import { PreviewPanel } from '@/components/preview/PreviewPanel';
 
+const MIN_CANVAS_HEIGHT = 200;
+const MIN_PREVIEW_HEIGHT = 100;
+
 const Index = () => {
+  const [canvasHeight, setCanvasHeight] = useState<number | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+
+  const handleDragStart = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+
+    const startY = e.clientY;
+    const container = e.currentTarget.parentElement;
+    if (!container) return;
+
+    const containerRect = container.getBoundingClientRect();
+    const initialCanvasHeight = canvasHeight ?? containerRect.height * 0.6;
+
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      const deltaY = moveEvent.clientY - startY;
+      const newHeight = initialCanvasHeight + deltaY;
+      const maxHeight = containerRect.height - MIN_PREVIEW_HEIGHT;
+      
+      setCanvasHeight(Math.max(MIN_CANVAS_HEIGHT, Math.min(newHeight, maxHeight)));
+    };
+
+    const handleMouseUp = () => {
+      setIsDragging(false);
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  }, [canvasHeight]);
+
   return (
     <div className="h-screen flex flex-col overflow-hidden">
       <TopBar />
       <div className="flex-1 flex min-h-0">
         <StructureSidebar />
         <main className="flex-1 flex flex-col min-w-0">
-          <DiagramCanvas />
-          <PreviewPanel />
+          <div 
+            className="flex-shrink-0 overflow-hidden"
+            style={{ height: canvasHeight ?? '60%' }}
+          >
+            <DiagramCanvas />
+          </div>
+          
+          {/* Draggable divider */}
+          <div
+            onMouseDown={handleDragStart}
+            className={`h-2 cursor-row-resize flex-shrink-0 flex items-center justify-center transition-colors ${
+              isDragging ? 'bg-primary/30' : 'bg-border hover:bg-primary/20'
+            }`}
+          >
+            <div className="w-12 h-1 rounded-full bg-muted-foreground/30" />
+          </div>
+          
+          <div className="flex-1 min-h-0 overflow-hidden">
+            <PreviewPanel />
+          </div>
         </main>
         <InspectorPanel />
       </div>

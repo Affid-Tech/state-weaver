@@ -7,6 +7,7 @@ import {
   FileCode,
   Layers,
   LayoutGrid,
+  Settings,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,6 +23,7 @@ import { useDiagramStore } from '@/store/diagramStore';
 import { generateTopicPuml, generateAggregatePuml } from '@/lib/pumlGenerator';
 import { validateProject, hasBlockingErrors } from '@/lib/validation';
 import { toast } from 'sonner';
+import { FieldConfigDialog } from '@/components/settings/FieldConfigDialog';
 
 export function TopBar() {
   const {
@@ -36,6 +38,7 @@ export function TopBar() {
 
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState(project.name);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const validationIssues = useMemo(() => validateProject(project), [project]);
@@ -182,7 +185,14 @@ export function TopBar() {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+
+          <Button variant="ghost" size="sm" onClick={() => setIsSettingsOpen(true)}>
+            <Settings className="h-4 w-4 mr-2" />
+            Settings
+          </Button>
         </div>
+
+        <FieldConfigDialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen} />
       </div>
 
       <div className="flex items-center gap-2">

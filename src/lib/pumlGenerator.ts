@@ -57,7 +57,6 @@ export function generateTopicPuml(project: DiagramProject, topicId: string): str
 
   const { instrument } = project;
   const { topic, states, transitions } = topicData;
-  const isRootTopic = topic.kind === 'root';
 
   const lines: string[] = [];
   lines.push('@startuml');
@@ -68,25 +67,36 @@ export function generateTopicPuml(project: DiagramProject, topicId: string): str
   lines.push(INLINE_STYLES);
   lines.push('');
 
-  // State declarations
+  // State declarations - InstrumentEnd and NewInstrument are declared at top level (outside topic)
   lines.push(`' --- States ---`);
+  
+  // Declare top-level states first (outside any container)
+  const hasNewInstrument = states.some(s => s.systemNodeType === 'NewInstrument');
+  const hasInstrumentEnd = states.some(s => s.systemNodeType === 'InstrumentEnd');
+  
+  if (hasNewInstrument) {
+    lines.push(`state NewInstrument <<start>>`);
+  }
+  if (hasInstrumentEnd) {
+    lines.push(`state ${instrument.id}.End <<end>>`);
+  }
+  if (hasNewInstrument || hasInstrumentEnd) {
+    lines.push('');
+  }
+
+  // Regular states within topic
   states.forEach((state) => {
     const qualifiedId = `${instrument.id}.${topic.id}.${state.id}`;
     
     if (state.systemNodeType === 'NewInstrument') {
-      // Root topic start: state NewInstrument <<start>>
-      lines.push(`state NewInstrument <<start>>`);
+      // Already declared at top level
     } else if (state.systemNodeType === 'TopicStart') {
-      // Normal topic start: state $type.$subtype.Start as "Topic Start" <<entryPoint>>
       lines.push(`state ${instrument.id}.${topic.id}.Start as "Topic Start" <<entryPoint>>`);
     } else if (state.systemNodeType === 'TopicEnd') {
-      // Topic end: state $type.$subtype.End as "Topic End" <<exitPoint>>
       lines.push(`state ${instrument.id}.${topic.id}.End as "Topic End" <<exitPoint>>`);
     } else if (state.systemNodeType === 'InstrumentEnd') {
-      // Instrument end: state $type.End <<end>>
-      lines.push(`state ${instrument.id}.End <<end>>`);
+      // Already declared at top level
     } else {
-      // Regular state
       const label = state.label || state.id;
       const stereotype = state.stereotype || state.id;
       lines.push(`state "${escapeLabel(label)}" as ${qualifiedId} <<${stereotype}>>`);
@@ -147,6 +157,7 @@ export function generateAggregatePuml(project: DiagramProject): string | null {
 
   const { instrument } = project;
   const normalTopics = project.topics.filter(t => t.topic.kind === 'normal');
+  const hasNormalTopics = normalTopics.length > 0;
 
   const lines: string[] = [];
   lines.push('@startuml');
@@ -156,12 +167,12 @@ export function generateAggregatePuml(project: DiagramProject): string | null {
   lines.push(INLINE_STYLES);
   lines.push('');
 
-  // Root topic container
-  lines.push(`state "${instrument.label || instrument.id}" as ${instrument.id} {`);
+  // NewInstrument OUTSIDE the instrument container
+  lines.push(`state NewInstrument <<start>>`);
   lines.push('');
 
-  // Single shared NewInstrument start
-  lines.push(`  state NewInstrument <<start>>`);
+  // Instrument container
+  lines.push(`state "${instrument.label || instrument.id}" as ${instrument.id} {`);
   lines.push('');
 
   // All root topics
@@ -170,11 +181,11 @@ export function generateAggregatePuml(project: DiagramProject): string | null {
     lines.push(`  state "${rootTopic.topic.label || rootTopic.topic.id}" as ${rootId} {`);
     rootTopic.states.forEach((state) => {
       if (state.systemNodeType === 'NewInstrument') {
-        // Skip, already declared at instrument level as shared
+        // Skip, declared at top level
       } else if (state.systemNodeType === 'TopicEnd') {
         lines.push(`    state ${rootId}.End as "Topic End" <<exitPoint>>`);
       } else if (state.systemNodeType === 'InstrumentEnd') {
-        // Skip, declared at instrument level
+        // Skip, declared at top level
       } else {
         const label = state.label || state.id;
         const stereotype = state.stereotype || state.id;
@@ -182,13 +193,16 @@ export function generateAggregatePuml(project: DiagramProject): string | null {
       }
     });
     lines.push('');
+    
+    // Transitions within root topic (excluding connections to NewInstrument - handled externally)
     rootTopic.transitions.forEach((transition) => {
       const fromState = rootTopic.states.find(s => s.id === transition.from);
       const toState = rootTopic.states.find(s => s.id === transition.to);
       
-      let fromAlias = fromState?.systemNodeType === 'NewInstrument' 
-        ? 'NewInstrument' 
-        : `${rootId}.${transition.from}`;
+      // Skip transitions from NewInstrument (handled externally)
+      if (fromState?.systemNodeType === 'NewInstrument') return;
+      
+      let fromAlias = `${rootId}.${transition.from}`;
       let toAlias = toState?.systemNodeType === 'TopicEnd' 
         ? `${rootId}.End` 
         : toState?.systemNodeType === 'InstrumentEnd'
@@ -206,21 +220,12 @@ export function generateAggregatePuml(project: DiagramProject): string | null {
     lines.push('');
   });
 
-  // Flow control nodes
-  lines.push(`  state "New Topic" as ${instrument.id}_NewTopicOut <<choice>>`);
-  lines.push(`  state "Topic Complete" as ${instrument.id}_NewTopicIn <<choice>>`);
-  lines.push('');
-
-  // Instrument end
-  lines.push(`  state ${instrument.id}.End <<end>>`);
-  lines.push('');
-
-  // Connect all root topic ends to NewTopicOut
-  rootTopics.forEach((rootTopic) => {
-    const rootId = `${instrument.id}.${rootTopic.topic.id}`;
-    lines.push(`  ${rootId}.End --> ${instrument.id}_NewTopicOut`);
-  });
-  lines.push('');
+  // Only add flow control nodes if there are normal topics
+  if (hasNormalTopics) {
+    lines.push(`  state "New Topic" as ${instrument.id}_NewTopicOut <<choice>>`);
+    lines.push(`  state "Topic Complete" as ${instrument.id}_NewTopicIn <<choice>>`);
+    lines.push('');
+  }
 
   // Normal topics
   normalTopics.forEach((topicData) => {
@@ -232,7 +237,7 @@ export function generateAggregatePuml(project: DiagramProject): string | null {
       } else if (state.systemNodeType === 'TopicEnd') {
         lines.push(`    state ${topicAlias}.End as "Topic End" <<exitPoint>>`);
       } else if (state.systemNodeType === 'InstrumentEnd') {
-        // Skip, declared at instrument level
+        // Skip, declared at top level
       } else {
         const label = state.label || state.id;
         const stereotype = state.stereotype || state.id;
@@ -270,13 +275,53 @@ export function generateAggregatePuml(project: DiagramProject): string | null {
     lines.push('');
   });
 
-  // Loop back
-  if (normalTopics.length > 0) {
+  // Loop back (only if normal topics exist)
+  if (hasNormalTopics) {
     lines.push(`  ${instrument.id}_NewTopicIn --> ${instrument.id}_NewTopicOut`);
+    lines.push('');
   }
 
   lines.push('}');
   lines.push('');
+
+  // InstrumentEnd OUTSIDE the instrument container
+  lines.push(`state ${instrument.id}.End <<end>>`);
+  lines.push('');
+
+  // Connect NewInstrument to first state of each root topic
+  rootTopics.forEach((rootTopic) => {
+    const rootId = `${instrument.id}.${rootTopic.topic.id}`;
+    // Find the first regular state that NewInstrument connects to
+    const startTransition = rootTopic.transitions.find(t => {
+      const fromState = rootTopic.states.find(s => s.id === t.from);
+      return fromState?.systemNodeType === 'NewInstrument';
+    });
+    
+    if (startTransition) {
+      const toState = rootTopic.states.find(s => s.id === startTransition.to);
+      let toAlias = toState?.systemNodeType === 'TopicEnd'
+        ? `${rootId}.End`
+        : `${rootId}.${startTransition.to}`;
+      
+      const label = getTransitionLabel(startTransition);
+      if (label) {
+        lines.push(`NewInstrument --> ${toAlias} : ${label}`);
+      } else {
+        lines.push(`NewInstrument --> ${toAlias}`);
+      }
+    }
+  });
+  lines.push('');
+
+  // Connect root topic ends to NewTopicOut (only if normal topics exist)
+  if (hasNormalTopics) {
+    rootTopics.forEach((rootTopic) => {
+      const rootId = `${instrument.id}.${rootTopic.topic.id}`;
+      lines.push(`${rootId}.End --> ${instrument.id}_NewTopicOut`);
+    });
+    lines.push('');
+  }
+
   lines.push('@enduml');
 
   return lines.join('\n');

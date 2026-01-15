@@ -23,13 +23,13 @@ import {
 } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
+import { Combobox } from '@/components/ui/combobox';
 import { useDiagramStore } from '@/store/diagramStore';
 import { validateProject } from '@/lib/validation';
 import { cn } from '@/lib/utils';
 import type { FlowType } from '@/types/diagram';
 
-const FLOW_TYPES: FlowType[] = ['B2B', 'B2C', 'C2B', 'C2C'];
-const REVISIONS = ['R1', 'R2', 'R3'];
+const DEFAULT_FLOW_TYPES: FlowType[] = ['B2B', 'B2C', 'C2B', 'C2C'];
 const HANDLE_SIDES = [
   { value: 'top', label: 'Top' },
   { value: 'bottom', label: 'Bottom' },
@@ -53,6 +53,7 @@ export function InspectorPanel() {
     project,
     selectedElementId,
     selectedElementType,
+    fieldConfig,
     addState,
     addInstrumentEnd,
     updateState,
@@ -62,6 +63,15 @@ export function InspectorPanel() {
     deleteTransition,
     selectElement,
   } = useDiagramStore();
+
+  // Derive available options from fieldConfig with fallbacks
+  const revisionOptions = fieldConfig.revisions;
+  const instrumentOptions = fieldConfig.instrumentTypes;
+  const topicOptions = fieldConfig.topicTypes;
+  const messageTypeOptions = fieldConfig.messageTypes;
+  const flowTypeOptions = fieldConfig.flowTypes.length > 0 
+    ? fieldConfig.flowTypes 
+    : DEFAULT_FLOW_TYPES;
 
   const [isAddStateOpen, setIsAddStateOpen] = useState(false);
   const [newStateId, setNewStateId] = useState('');
@@ -327,94 +337,87 @@ export function InspectorPanel() {
                     <>
                       <div className="space-y-2">
                         <Label>Revision (optional)</Label>
-                        <Select
-                          value={selectedTransition.revision || '__none__'}
-                          onValueChange={(v) => {
+                        <Combobox
+                          value={selectedTransition.revision || ''}
+                          onChange={(v) => {
                             if (project.selectedTopicId) {
                               updateTransition(project.selectedTopicId, selectedTransition.id, { 
-                                revision: v === '__none__' ? undefined : v 
+                                revision: v || undefined 
                               });
                             }
                           }}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select revision..." />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="__none__">None</SelectItem>
-                            {REVISIONS.map((rev) => (
-                              <SelectItem key={rev} value={rev}>{rev}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                          options={revisionOptions}
+                          placeholder="Select or enter revision..."
+                          allowCustom
+                        />
                       </div>
 
                       <div className="space-y-2">
                         <Label>Instrument (optional)</Label>
-                        <Input
+                        <Combobox
                           value={selectedTransition.instrument || ''}
-                          onChange={(e) => {
+                          onChange={(v) => {
                             if (project.selectedTopicId) {
                               updateTransition(project.selectedTopicId, selectedTransition.id, { 
-                                instrument: e.target.value || undefined 
+                                instrument: v || undefined 
                               });
                             }
                           }}
-                          placeholder="e.g., pacs.008"
+                          options={instrumentOptions}
+                          placeholder="Select or enter instrument..."
+                          allowCustom
                         />
                       </div>
 
                       <div className="space-y-2">
                         <Label>Topic (optional)</Label>
-                        <Input
+                        <Combobox
                           value={selectedTransition.topic || ''}
-                          onChange={(e) => {
+                          onChange={(v) => {
                             if (project.selectedTopicId) {
                               updateTransition(project.selectedTopicId, selectedTransition.id, { 
-                                topic: e.target.value || undefined 
+                                topic: v || undefined 
                               });
                             }
                           }}
-                          placeholder="e.g., Release"
+                          options={topicOptions}
+                          placeholder="Select or enter topic..."
+                          allowCustom
                         />
                       </div>
 
                       <div className="space-y-2">
                         <Label>MessageType *</Label>
-                        <Input
+                        <Combobox
                           value={selectedTransition.messageType}
-                          onChange={(e) => {
+                          onChange={(v) => {
                             if (project.selectedTopicId) {
                               updateTransition(project.selectedTopicId, selectedTransition.id, { 
-                                messageType: e.target.value 
+                                messageType: v 
                               });
                             }
                           }}
-                          placeholder="e.g., Submit"
+                          options={messageTypeOptions}
+                          placeholder="Select or enter message type..."
+                          allowCustom
                         />
                       </div>
 
                       <div className="space-y-2">
                         <Label>FlowType *</Label>
-                        <Select
+                        <Combobox
                           value={selectedTransition.flowType}
-                          onValueChange={(v) => {
-                            if (project.selectedTopicId) {
+                          onChange={(v) => {
+                            if (project.selectedTopicId && v) {
                               updateTransition(project.selectedTopicId, selectedTransition.id, { 
                                 flowType: v as FlowType 
                               });
                             }
                           }}
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {FLOW_TYPES.map((ft) => (
-                              <SelectItem key={ft} value={ft}>{ft}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                          options={flowTypeOptions}
+                          placeholder="Select flow type..."
+                          allowCustom={fieldConfig.flowTypes.length > 0}
+                        />
                       </div>
                     </>
                   ) : (
