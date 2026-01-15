@@ -307,6 +307,13 @@ function DiagramCanvasInner() {
     selectElement(null, null);
   }, [selectElement]);
 
+  const onEdgeClick = useCallback(
+    (_event: React.MouseEvent, edge: Edge) => {
+      handleEdgeSelect(edge.id);
+    },
+    [handleEdgeSelect]
+  );
+
   // Connection mode handlers
   const onConnectStart = useCallback(() => {
     setIsConnecting(true);
@@ -402,6 +409,7 @@ function DiagramCanvasInner() {
               onReconnect={onReconnect}
               onNodeDragStop={onNodeDragStop}
               onPaneClick={onPaneClick}
+              onEdgeClick={onEdgeClick}
               nodeTypes={nodeTypes}
               edgeTypes={edgeTypes}
               defaultEdgeOptions={defaultEdgeOptions}
