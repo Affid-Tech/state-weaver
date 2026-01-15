@@ -78,7 +78,7 @@ export function generateTopicPuml(project: DiagramProject, topicId: string): str
     lines.push(`state NewInstrument <<start>>`);
   }
   if (hasInstrumentEnd) {
-    lines.push(`state ${instrument.id}.End <<end>>`);
+    lines.push(`state EndInstrument <<end>>`);
   }
   if (hasNewInstrument || hasInstrumentEnd) {
     lines.push('');
@@ -119,7 +119,7 @@ export function generateTopicPuml(project: DiagramProject, topicId: string): str
     } else if (fromState?.systemNodeType === 'TopicEnd') {
       fromAlias = `${instrument.id}.${topic.id}.End`;
     } else if (fromState?.systemNodeType === 'InstrumentEnd') {
-      fromAlias = `${instrument.id}.End`;
+      fromAlias = 'EndInstrument';
     } else {
       fromAlias = `${instrument.id}.${topic.id}.${transition.from}`;
     }
@@ -132,7 +132,7 @@ export function generateTopicPuml(project: DiagramProject, topicId: string): str
     } else if (toState?.systemNodeType === 'TopicEnd') {
       toAlias = `${instrument.id}.${topic.id}.End`;
     } else if (toState?.systemNodeType === 'InstrumentEnd') {
-      toAlias = `${instrument.id}.End`;
+      toAlias = 'EndInstrument';
     } else {
       toAlias = `${instrument.id}.${topic.id}.${transition.to}`;
     }
@@ -206,7 +206,7 @@ export function generateAggregatePuml(project: DiagramProject): string | null {
       let toAlias = toState?.systemNodeType === 'TopicEnd' 
         ? `${rootId}.End` 
         : toState?.systemNodeType === 'InstrumentEnd'
-          ? `${instrument.id}.End`
+          ? 'EndInstrument'
           : `${rootId}.${transition.to}`;
       
       const label = getTransitionLabel(transition);
@@ -255,7 +255,7 @@ export function generateAggregatePuml(project: DiagramProject): string | null {
       let toAlias = toState?.systemNodeType === 'TopicEnd' 
         ? `${topicAlias}.End` 
         : toState?.systemNodeType === 'InstrumentEnd'
-          ? `${instrument.id}.End`
+          ? 'EndInstrument'
           : `${topicAlias}.${transition.to}`;
       
       const label = getTransitionLabel(transition);
@@ -285,7 +285,7 @@ export function generateAggregatePuml(project: DiagramProject): string | null {
   lines.push('');
 
   // InstrumentEnd OUTSIDE the instrument container
-  lines.push(`state ${instrument.id}.End <<end>>`);
+  lines.push(`state EndInstrument <<end>>`);
   lines.push('');
 
   // Connect NewInstrument to first state of each root topic

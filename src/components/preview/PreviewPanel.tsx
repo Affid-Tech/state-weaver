@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
-import { Copy, RefreshCw, AlertCircle, ChevronDown, ChevronUp, GripHorizontal } from 'lucide-react';
+import { Copy, RefreshCw, AlertCircle, ChevronDown, ChevronUp, GripVertical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useDiagramStore } from '@/store/diagramStore';
@@ -7,14 +7,14 @@ import { generateTopicPuml, generateAggregatePuml } from '@/lib/pumlGenerator';
 import { renderPumlToSvg } from '@/lib/krokiRenderer';
 import { cn } from '@/lib/utils';
 
-const MIN_HEIGHT = 48;
-const MAX_HEIGHT = 600;
-const DEFAULT_HEIGHT = 320;
+const MIN_CODE_WIDTH = 100;
+const MAX_CODE_WIDTH = 600;
+const DEFAULT_CODE_WIDTH = 320;
 
 export function PreviewPanel() {
   const { project, viewMode } = useDiagramStore();
   const [isExpanded, setIsExpanded] = useState(true);
-  const [panelHeight, setPanelHeight] = useState(DEFAULT_HEIGHT);
+  const [codeWidth, setCodeWidth] = useState(DEFAULT_CODE_WIDTH);
   const [isDragging, setIsDragging] = useState(false);
   const [svg, setSvg] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -61,7 +61,7 @@ export function PreviewPanel() {
     }
   }, [pumlText]);
 
-  // Drag handling for resize
+  // Drag handling for vertical resize between preview and code
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     setIsDragging(true);
@@ -71,21 +71,16 @@ export function PreviewPanel() {
     if (!isDragging) return;
 
     const handleMouseMove = (e: MouseEvent) => {
-      const windowHeight = window.innerHeight;
-      const newHeight = Math.min(MAX_HEIGHT, Math.max(MIN_HEIGHT, windowHeight - e.clientY));
-      setPanelHeight(newHeight);
-      // Auto-expand if dragging above threshold
-      if (newHeight > MIN_HEIGHT + 20) {
-        setIsExpanded(true);
-      }
+      const container = document.getElementById('preview-content-container');
+      if (!container) return;
+      
+      const containerRect = container.getBoundingClientRect();
+      const newWidth = Math.min(MAX_CODE_WIDTH, Math.max(MIN_CODE_WIDTH, containerRect.right - e.clientX));
+      setCodeWidth(newWidth);
     };
 
     const handleMouseUp = () => {
       setIsDragging(false);
-      // Collapse if height is near minimum
-      if (panelHeight <= MIN_HEIGHT + 20) {
-        setIsExpanded(false);
-      }
     };
 
     window.addEventListener('mousemove', handleMouseMove);
@@ -94,26 +89,10 @@ export function PreviewPanel() {
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [isDragging, panelHeight]);
-
-  const currentHeight = isExpanded ? panelHeight : MIN_HEIGHT;
+  }, [isDragging]);
 
   return (
-    <div 
-      className="border-t border-border bg-card flex flex-col transition-[height] duration-150"
-      style={{ height: currentHeight }}
-    >
-      {/* Drag handle */}
-      <div
-        onMouseDown={handleMouseDown}
-        className={cn(
-          'h-1.5 cursor-ns-resize bg-border hover:bg-primary/50 transition-colors flex items-center justify-center',
-          isDragging && 'bg-primary/50'
-        )}
-      >
-        <GripHorizontal className="h-3 w-3 text-muted-foreground" />
-      </div>
-
+    <div className="border-t border-border bg-card flex flex-col flex-1 min-h-0">
       <div className="flex items-center justify-between px-4 py-2 border-b border-border">
         <button
           onClick={() => setIsExpanded(!isExpanded)}
@@ -144,7 +123,7 @@ export function PreviewPanel() {
       </div>
 
       {isExpanded && (
-        <div className="flex-1 flex min-h-0">
+        <div id="preview-content-container" className="flex-1 flex min-h-0">
           {/* SVG Preview */}
           <div className="flex-1 overflow-auto bg-background p-4">
             {isLoading && (
@@ -174,8 +153,22 @@ export function PreviewPanel() {
             )}
           </div>
 
+          {/* Vertical drag handle */}
+          <div
+            onMouseDown={handleMouseDown}
+            className={cn(
+              'w-1.5 cursor-ew-resize bg-border hover:bg-primary/50 transition-colors flex items-center justify-center',
+              isDragging && 'bg-primary/50'
+            )}
+          >
+            <GripVertical className="h-4 w-4 text-muted-foreground" />
+          </div>
+
           {/* PUML Code */}
-          <div className="w-80 border-l border-border bg-muted/30">
+          <div 
+            className="border-l border-border bg-muted/30 flex-shrink-0"
+            style={{ width: codeWidth }}
+          >
             <ScrollArea className="h-full">
               <pre className="p-4 text-xs font-mono text-muted-foreground whitespace-pre-wrap">
                 {pumlText || 'No PlantUML generated'}
