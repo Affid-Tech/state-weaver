@@ -88,13 +88,15 @@ export function InspectorPanel() {
     if (!selectedState) return false;
     if (!selectedState.isSystemNode) return true;
     
-    // Can only delete TopicEnd if InstrumentEnd exists, and vice versa
-    if (selectedState.systemNodeType === 'TopicEnd') return hasInstrumentEnd;
+    // TopicEnd can NEVER be deleted - topic must always have a proper end
+    if (selectedState.systemNodeType === 'TopicEnd') return false;
+    
+    // InstrumentEnd can be deleted only if TopicEnd exists
     if (selectedState.systemNodeType === 'InstrumentEnd') return hasTopicEnd;
     
     // Cannot delete start nodes (TopicStart, NewInstrument)
     return false;
-  }, [selectedState, hasInstrumentEnd, hasTopicEnd]);
+  }, [selectedState, hasTopicEnd]);
 
   const validationIssues = useMemo(() => validateProject(project), [project]);
   const errors = validationIssues.filter(i => i.level === 'error');
@@ -311,97 +313,106 @@ export function InspectorPanel() {
                     </p>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label>Revision (optional)</Label>
-                    <Select
-                      value={selectedTransition.revision || '__none__'}
-                      onValueChange={(v) => {
-                        if (project.selectedTopicId) {
-                          updateTransition(project.selectedTopicId, selectedTransition.id, { 
-                            revision: v === '__none__' ? undefined : v 
-                          });
-                        }
-                      }}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select revision..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="__none__">None</SelectItem>
-                        {REVISIONS.map((rev) => (
-                          <SelectItem key={rev} value={rev}>{rev}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  {/* Only show editable properties for non-end transitions */}
+                  {selectedTransition.kind !== 'endTopic' && selectedTransition.kind !== 'endInstrument' ? (
+                    <>
+                      <div className="space-y-2">
+                        <Label>Revision (optional)</Label>
+                        <Select
+                          value={selectedTransition.revision || '__none__'}
+                          onValueChange={(v) => {
+                            if (project.selectedTopicId) {
+                              updateTransition(project.selectedTopicId, selectedTransition.id, { 
+                                revision: v === '__none__' ? undefined : v 
+                              });
+                            }
+                          }}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select revision..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="__none__">None</SelectItem>
+                            {REVISIONS.map((rev) => (
+                              <SelectItem key={rev} value={rev}>{rev}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
 
-                  <div className="space-y-2">
-                    <Label>Instrument (optional)</Label>
-                    <Input
-                      value={selectedTransition.instrument || ''}
-                      onChange={(e) => {
-                        if (project.selectedTopicId) {
-                          updateTransition(project.selectedTopicId, selectedTransition.id, { 
-                            instrument: e.target.value || undefined 
-                          });
-                        }
-                      }}
-                      placeholder="e.g., pacs.008"
-                    />
-                  </div>
+                      <div className="space-y-2">
+                        <Label>Instrument (optional)</Label>
+                        <Input
+                          value={selectedTransition.instrument || ''}
+                          onChange={(e) => {
+                            if (project.selectedTopicId) {
+                              updateTransition(project.selectedTopicId, selectedTransition.id, { 
+                                instrument: e.target.value || undefined 
+                              });
+                            }
+                          }}
+                          placeholder="e.g., pacs.008"
+                        />
+                      </div>
 
-                  <div className="space-y-2">
-                    <Label>Topic (optional)</Label>
-                    <Input
-                      value={selectedTransition.topic || ''}
-                      onChange={(e) => {
-                        if (project.selectedTopicId) {
-                          updateTransition(project.selectedTopicId, selectedTransition.id, { 
-                            topic: e.target.value || undefined 
-                          });
-                        }
-                      }}
-                      placeholder="e.g., Release"
-                    />
-                  </div>
+                      <div className="space-y-2">
+                        <Label>Topic (optional)</Label>
+                        <Input
+                          value={selectedTransition.topic || ''}
+                          onChange={(e) => {
+                            if (project.selectedTopicId) {
+                              updateTransition(project.selectedTopicId, selectedTransition.id, { 
+                                topic: e.target.value || undefined 
+                              });
+                            }
+                          }}
+                          placeholder="e.g., Release"
+                        />
+                      </div>
 
-                  <div className="space-y-2">
-                    <Label>MessageType *</Label>
-                    <Input
-                      value={selectedTransition.messageType}
-                      onChange={(e) => {
-                        if (project.selectedTopicId) {
-                          updateTransition(project.selectedTopicId, selectedTransition.id, { 
-                            messageType: e.target.value 
-                          });
-                        }
-                      }}
-                      placeholder="e.g., Submit"
-                    />
-                  </div>
+                      <div className="space-y-2">
+                        <Label>MessageType *</Label>
+                        <Input
+                          value={selectedTransition.messageType}
+                          onChange={(e) => {
+                            if (project.selectedTopicId) {
+                              updateTransition(project.selectedTopicId, selectedTransition.id, { 
+                                messageType: e.target.value 
+                              });
+                            }
+                          }}
+                          placeholder="e.g., Submit"
+                        />
+                      </div>
 
-                  <div className="space-y-2">
-                    <Label>FlowType *</Label>
-                    <Select
-                      value={selectedTransition.flowType}
-                      onValueChange={(v) => {
-                        if (project.selectedTopicId) {
-                          updateTransition(project.selectedTopicId, selectedTransition.id, { 
-                            flowType: v as FlowType 
-                          });
-                        }
-                      }}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {FLOW_TYPES.map((ft) => (
-                          <SelectItem key={ft} value={ft}>{ft}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                      <div className="space-y-2">
+                        <Label>FlowType *</Label>
+                        <Select
+                          value={selectedTransition.flowType}
+                          onValueChange={(v) => {
+                            if (project.selectedTopicId) {
+                              updateTransition(project.selectedTopicId, selectedTransition.id, { 
+                                flowType: v as FlowType 
+                              });
+                            }
+                          }}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {FLOW_TYPES.map((ft) => (
+                              <SelectItem key={ft} value={ft}>{ft}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </>
+                  ) : (
+                    <p className="text-sm text-muted-foreground italic">
+                      End transitions have no editable properties.
+                    </p>
+                  )}
                 </div>
               )}
 

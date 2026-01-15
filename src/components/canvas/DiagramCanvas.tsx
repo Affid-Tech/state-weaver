@@ -16,6 +16,10 @@ import {
   OnEdgesChange,
   EdgeChange,
   reconnectEdge,
+  useReactFlow,
+  ReactFlowProvider,
+  NodeChange,
+  OnNodesChange,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
@@ -23,7 +27,7 @@ import { useDiagramStore } from '@/store/diagramStore';
 import { StateNodeComponent } from './StateNode';
 import { TransitionEdge } from './TransitionEdge';
 import { NewTransitionDialog } from './NewTransitionDialog';
-import type { FlowType } from '@/types/diagram';
+import type { FlowType, StateNode as StateNodeType } from '@/types/diagram';
 
 const nodeTypes: NodeTypes = {
   stateNode: StateNodeComponent as any,
@@ -48,7 +52,35 @@ interface PendingConnection {
   target: string;
 }
 
-export function DiagramCanvas() {
+// Compute edge indices for multiple edges between same node pairs
+function computeEdgeIndices(transitions: { id: string; from: string; to: string }[]): Map<string, { index: number; total: number }> {
+  // Group edges by normalized source-target pair (treat A->B and B->A as same group for bidirectional)
+  const pairGroups = new Map<string, string[]>();
+  
+  transitions.forEach(t => {
+    // For self-loops, use just the node id
+    const key = t.from === t.to 
+      ? `self:${t.from}` 
+      : [t.from, t.to].sort().join(':');
+    
+    if (!pairGroups.has(key)) {
+      pairGroups.set(key, []);
+    }
+    pairGroups.get(key)!.push(t.id);
+  });
+  
+  const result = new Map<string, { index: number; total: number }>();
+  
+  pairGroups.forEach((edgeIds) => {
+    edgeIds.forEach((id, index) => {
+      result.set(id, { index, total: edgeIds.length });
+    });
+  });
+  
+  return result;
+}
+
+function DiagramCanvasInner() {
   const {
     project,
     selectedElementId,
@@ -62,6 +94,7 @@ export function DiagramCanvas() {
   } = useDiagramStore();
 
   const [pendingConnection, setPendingConnection] = useState<PendingConnection | null>(null);
+  const { getNodes } = useReactFlow();
 
   const selectedTopicData = useMemo(() => {
     if (!project.selectedTopicId) return null;
@@ -90,20 +123,31 @@ export function DiagramCanvas() {
     }));
   }, [selectedTopicData, selectedElementId, selectedElementType, handleNodeSelect]);
 
+  // Compute edge indices for proper offset rendering
+  const edgeIndices = useMemo(() => {
+    if (!selectedTopicData) return new Map();
+    return computeEdgeIndices(selectedTopicData.transitions);
+  }, [selectedTopicData]);
+
   const initialEdges: Edge[] = useMemo(() => {
     if (!selectedTopicData) return [];
-    return selectedTopicData.transitions.map((transition) => ({
-      id: transition.id,
-      source: transition.from,
-      target: transition.to,
-      type: 'transition',
-      data: {
-        transition,
-        isSelected: selectedElementId === transition.id && selectedElementType === 'transition',
-        onSelect: handleEdgeSelect,
-      },
-    }));
-  }, [selectedTopicData, selectedElementId, selectedElementType, handleEdgeSelect]);
+    return selectedTopicData.transitions.map((transition) => {
+      const indexInfo = edgeIndices.get(transition.id) ?? { index: 0, total: 1 };
+      return {
+        id: transition.id,
+        source: transition.from,
+        target: transition.to,
+        type: 'transition',
+        data: {
+          transition,
+          isSelected: selectedElementId === transition.id && selectedElementType === 'transition',
+          onSelect: handleEdgeSelect,
+          edgeIndex: indexInfo.index,
+          totalEdges: indexInfo.total,
+        },
+      };
+    });
+  }, [selectedTopicData, selectedElementId, selectedElementType, handleEdgeSelect, edgeIndices]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
@@ -114,7 +158,7 @@ export function DiagramCanvas() {
     setEdges(initialEdges);
   }, [initialNodes, initialEdges, setNodes, setEdges]);
 
-  // Handle keyboard shortcuts
+  // Handle keyboard shortcuts for bulk delete
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (!project.selectedTopicId) return;
@@ -128,11 +172,31 @@ export function DiagramCanvas() {
       if (event.key === 'Delete' || event.key === 'Backspace') {
         event.preventDefault();
         
-        if (selectedElementId && selectedElementType === 'transition') {
-          deleteTransition(project.selectedTopicId, selectedElementId);
+        // Get all selected nodes and edges from React Flow
+        const currentNodes = getNodes();
+        const selectedNodes = currentNodes.filter(n => n.selected);
+        const selectedEdges = edges.filter(e => e.selected);
+        
+        // Delete selected transitions
+        selectedEdges.forEach(edge => {
+          deleteTransition(project.selectedTopicId!, edge.id);
+        });
+        
+        // Delete selected states (will also remove connected transitions)
+        selectedNodes.forEach(node => {
+          deleteState(project.selectedTopicId!, node.id);
+        });
+        
+        // Clear selection if anything was deleted
+        if (selectedNodes.length > 0 || selectedEdges.length > 0) {
           selectElement(null, null);
-        } else if (selectedElementId && selectedElementType === 'state') {
-          deleteState(project.selectedTopicId, selectedElementId);
+        } else if (selectedElementId) {
+          // Fallback for single selection via inspector
+          if (selectedElementType === 'transition') {
+            deleteTransition(project.selectedTopicId, selectedElementId);
+          } else if (selectedElementType === 'state') {
+            deleteState(project.selectedTopicId, selectedElementId);
+          }
           selectElement(null, null);
         }
       }
@@ -140,15 +204,32 @@ export function DiagramCanvas() {
     
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [project.selectedTopicId, selectedElementId, selectedElementType, deleteTransition, deleteState, selectElement]);
+  }, [project.selectedTopicId, selectedElementId, selectedElementType, deleteTransition, deleteState, selectElement, getNodes, edges]);
 
   const onConnect = useCallback(
     (params: Connection) => {
-      if (!project.selectedTopicId || !params.source || !params.target) return;
-      // Open dialog to collect transition details
-      setPendingConnection({ source: params.source, target: params.target });
+      if (!project.selectedTopicId || !params.source || !params.target || !selectedTopicData) return;
+      
+      // Check if target is an end node (TopicEnd or InstrumentEnd)
+      const targetState = selectedTopicData.states.find(s => s.id === params.target);
+      const isEndNode = targetState?.systemNodeType === 'TopicEnd' || targetState?.systemNodeType === 'InstrumentEnd';
+      
+      if (isEndNode) {
+        // Auto-create transition without dialog - end transitions have no properties
+        const transitionId = addTransition(
+          project.selectedTopicId,
+          params.source,
+          params.target,
+          '', // Empty messageType for end transitions
+          'B2B' // Default flowType (not used for end transitions)
+        );
+        selectElement(transitionId, 'transition');
+      } else {
+        // Open dialog to collect transition details
+        setPendingConnection({ source: params.source, target: params.target });
+      }
     },
-    [project.selectedTopicId]
+    [project.selectedTopicId, selectedTopicData, addTransition, selectElement]
   );
 
   const handleCreateTransition = useCallback(
@@ -172,10 +253,14 @@ export function DiagramCanvas() {
     setPendingConnection(null);
   }, []);
 
+  // Handle drag stop for single node or selection
   const onNodeDragStop = useCallback(
-    (_event: React.MouseEvent, node: Node) => {
+    (_event: React.MouseEvent, node: Node, draggedNodes: Node[]) => {
       if (!project.selectedTopicId) return;
-      updateStatePosition(project.selectedTopicId, node.id, node.position);
+      // Update positions for all dragged nodes (supports bulk move)
+      draggedNodes.forEach(n => {
+        updateStatePosition(project.selectedTopicId!, n.id, n.position);
+      });
     },
     [project.selectedTopicId, updateStatePosition]
   );
@@ -244,6 +329,9 @@ export function DiagramCanvas() {
         fitView
         proOptions={{ hideAttribution: true }}
         edgesReconnectable
+        selectionOnDrag
+        selectNodesOnDrag
+        multiSelectionKeyCode="Shift"
       >
         <Background variant={BackgroundVariant.Dots} gap={20} size={1} />
         <Controls />
@@ -280,5 +368,14 @@ export function DiagramCanvas() {
         onConfirm={handleCreateTransition}
       />
     </div>
+  );
+}
+
+// Wrap with provider for useReactFlow hook
+export function DiagramCanvas() {
+  return (
+    <ReactFlowProvider>
+      <DiagramCanvasInner />
+    </ReactFlowProvider>
   );
 }
