@@ -20,6 +20,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Combobox } from '@/components/ui/combobox';
 import { useDiagramStore } from '@/store/diagramStore';
 import { cn } from '@/lib/utils';
 import type { TopicKind } from '@/types/diagram';
@@ -27,6 +28,7 @@ import type { TopicKind } from '@/types/diagram';
 export function StructureSidebar() {
   const {
     project,
+    fieldConfig,
     updateInstrument,
     createTopic,
     deleteTopic,
@@ -69,12 +71,23 @@ export function StructureSidebar() {
         </Label>
         <div className="space-y-3">
           <div className="space-y-1">
-            <Label className="text-xs text-sidebar-muted-foreground">ID</Label>
-            <Input
+            <Label className="text-xs text-sidebar-muted-foreground">ID *</Label>
+            <Combobox
               value={project.instrument.id}
-              onChange={(e) => updateInstrument({ id: e.target.value })}
+              onChange={(v) => updateInstrument({ id: v })}
+              options={fieldConfig.instrumentTypes}
               placeholder="e.g., pacs_008"
-              className="bg-sidebar-accent border-sidebar-border text-sidebar-foreground placeholder:text-sidebar-muted-foreground"
+              className="bg-sidebar-accent border-sidebar-border text-sidebar-foreground"
+            />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs text-sidebar-muted-foreground">Revision *</Label>
+            <Combobox
+              value={project.instrument.revision || ''}
+              onChange={(v) => updateInstrument({ revision: v })}
+              options={fieldConfig.revisions}
+              placeholder="e.g., R1"
+              className="bg-sidebar-accent border-sidebar-border text-sidebar-foreground"
             />
           </div>
           <div className="space-y-1">
@@ -111,9 +124,10 @@ export function StructureSidebar() {
               <div className="space-y-4 py-4">
                 <div className="space-y-2">
                   <Label>Topic ID *</Label>
-                  <Input
+                  <Combobox
                     value={newTopicId}
-                    onChange={(e) => setNewTopicId(e.target.value)}
+                    onChange={setNewTopicId}
+                    options={fieldConfig.topicTypes}
                     placeholder="e.g., Release"
                   />
                 </div>

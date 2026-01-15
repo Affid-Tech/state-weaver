@@ -71,7 +71,7 @@ const createSampleProject = (): DiagramProject => {
   return {
     id: projectId,
     name: 'Payment Processing',
-    instrument: { id: 'pacs_008', label: 'PACS 008 Payment' },
+    instrument: { id: 'pacs_008', revision: 'R1', label: 'PACS 008 Payment' },
     topics: [
       {
         topic: { id: 'Release', label: 'Payment Release', kind: 'root' },
@@ -123,7 +123,7 @@ const createSampleProject = (): DiagramProject => {
           },
         ],
         transitions: [
-          { id: uuidv4(), from: 'NewInstrument', to: 'Submitted', kind: 'startInstrument', messageType: 'pacs.008', flowType: 'B2B', sourceHandleId: 'source-bottom', targetHandleId: 'target-top' },
+          { id: uuidv4(), from: 'NewInstrument', to: 'Submitted', kind: 'startInstrument', messageType: 'pacs_008', flowType: 'B2B', sourceHandleId: 'source-bottom', targetHandleId: 'target-top' },
           { id: uuidv4(), from: 'Submitted', to: 'Validated', kind: 'normal', messageType: 'validate', flowType: 'B2B', sourceHandleId: 'source-bottom', targetHandleId: 'target-top' },
           { id: uuidv4(), from: 'Submitted', to: 'Rejected', kind: 'normal', messageType: 'reject', flowType: 'B2B', sourceHandleId: 'source-right', targetHandleId: 'target-left' },
           { id: uuidv4(), from: 'Validated', to: 'TopicEnd', kind: 'endTopic', messageType: '', flowType: 'B2B', sourceHandleId: 'source-bottom', targetHandleId: 'target-top' },

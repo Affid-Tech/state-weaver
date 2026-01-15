@@ -23,7 +23,6 @@ interface ComboboxProps {
   options: string[];
   placeholder?: string;
   emptyMessage?: string;
-  allowCustom?: boolean;
   className?: string;
 }
 
@@ -31,15 +30,19 @@ export function Combobox({
   value,
   onChange,
   options,
-  placeholder = "Select or type...",
+  placeholder = "Select...",
   emptyMessage = "No options found.",
-  allowCustom = true,
   className,
 }: ComboboxProps) {
   const [open, setOpen] = React.useState(false);
   const [inputValue, setInputValue] = React.useState(value);
 
-  // If no options, render as simple input
+  // Keep inputValue in sync with value prop
+  React.useEffect(() => {
+    setInputValue(value);
+  }, [value]);
+
+  // If no options configured, render as simple input (free text allowed)
   if (options.length === 0) {
     return (
       <Input
@@ -51,6 +54,7 @@ export function Combobox({
     );
   }
 
+  // Options exist: render as strict select (no custom values allowed)
   const filteredOptions = options.filter((option) =>
     option.toLowerCase().includes(inputValue.toLowerCase())
   );
@@ -63,9 +67,7 @@ export function Combobox({
 
   const handleInputChange = (newValue: string) => {
     setInputValue(newValue);
-    if (allowCustom) {
-      onChange(newValue);
-    }
+    // Don't call onChange - only select from options is allowed
   };
 
   return (
@@ -86,29 +88,13 @@ export function Combobox({
       <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
         <Command shouldFilter={false}>
           <CommandInput
-            placeholder={placeholder}
+            placeholder={`Filter ${placeholder.toLowerCase()}...`}
             value={inputValue}
             onValueChange={handleInputChange}
           />
           <CommandList>
-            {filteredOptions.length === 0 && !allowCustom && (
+            {filteredOptions.length === 0 && (
               <CommandEmpty>{emptyMessage}</CommandEmpty>
-            )}
-            {filteredOptions.length === 0 && allowCustom && inputValue && (
-              <CommandGroup>
-                <CommandItem
-                  value={inputValue}
-                  onSelect={() => handleSelect(inputValue)}
-                >
-                  <Check
-                    className={cn(
-                      "mr-2 h-4 w-4",
-                      value === inputValue ? "opacity-100" : "opacity-0"
-                    )}
-                  />
-                  Use "{inputValue}"
-                </CommandItem>
-              </CommandGroup>
             )}
             {filteredOptions.length > 0 && (
               <CommandGroup>

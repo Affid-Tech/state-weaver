@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/dialog';
 import { useDiagramStore } from '@/store/diagramStore';
 import { toast } from 'sonner';
+import { isValidEnumName } from '@/lib/validation';
 import type { FieldConfig } from '@/types/fieldConfig';
 
 interface FieldConfigDialogProps {
@@ -45,6 +46,13 @@ export function FieldConfigDialog({ open, onOpenChange }: FieldConfigDialogProps
   const handleAddValue = (field: FieldKey) => {
     const value = newValues[field].trim();
     if (!value) return;
+    
+    // Validate Java enum naming convention
+    if (!isValidEnumName(value)) {
+      toast.error('Invalid name: must follow Java enum convention (start with letter, only letters/numbers/underscores, no spaces)');
+      return;
+    }
+    
     if (fieldConfig[field].includes(value)) {
       toast.error(`"${value}" already exists`);
       return;
@@ -81,8 +89,31 @@ export function FieldConfigDialog({ open, onOpenChange }: FieldConfigDialogProps
     reader.onload = (event) => {
       try {
         const config = JSON.parse(event.target?.result as string) as Partial<FieldConfig>;
-        updateFieldConfig(config);
-        toast.success('Configuration imported');
+        
+        // Validate all values in imported config
+        let hasInvalidValues = false;
+        const validatedConfig: Partial<FieldConfig> = {};
+        
+        for (const [key, values] of Object.entries(config)) {
+          if (Array.isArray(values)) {
+            const validValues = values.filter((v: string) => {
+              if (!isValidEnumName(v)) {
+                hasInvalidValues = true;
+                return false;
+              }
+              return true;
+            });
+            validatedConfig[key as FieldKey] = validValues;
+          }
+        }
+        
+        updateFieldConfig(validatedConfig);
+        
+        if (hasInvalidValues) {
+          toast.warning('Configuration imported with some invalid values removed');
+        } else {
+          toast.success('Configuration imported');
+        }
       } catch {
         toast.error('Invalid configuration file');
       }
@@ -105,7 +136,7 @@ export function FieldConfigDialog({ open, onOpenChange }: FieldConfigDialogProps
                 key={value}
                 className="flex items-center justify-between px-3 py-2 rounded-md bg-muted"
               >
-                <span className="text-sm">{value}</span>
+                <span className="text-sm font-mono">{value}</span>
                 <Button
                   size="icon"
                   variant="ghost"
@@ -124,13 +155,17 @@ export function FieldConfigDialog({ open, onOpenChange }: FieldConfigDialogProps
         <Input
           value={newValues[field]}
           onChange={(e) => setNewValues((prev) => ({ ...prev, [field]: e.target.value }))}
-          placeholder={`Add new ${FIELD_LABELS[field].toLowerCase().replace(/s$/, '')}...`}
+          placeholder={`Add new value (e.g., MY_VALUE)...`}
           onKeyDown={(e) => e.key === 'Enter' && handleAddValue(field)}
+          className="font-mono"
         />
         <Button onClick={() => handleAddValue(field)} disabled={!newValues[field].trim()}>
           <Plus className="h-4 w-4" />
         </Button>
       </div>
+      <p className="text-xs text-muted-foreground mt-2">
+        Values must follow Java enum naming: letters, numbers, underscores only (e.g., MY_VALUE, R1)
+      </p>
     </TabsContent>
   );
 
@@ -141,7 +176,7 @@ export function FieldConfigDialog({ open, onOpenChange }: FieldConfigDialogProps
           <DialogTitle>Field Configuration</DialogTitle>
           <DialogDescription>
             Configure the available options for diagram fields. When values are configured,
-            fields will show dropdowns with these options while still allowing custom input.
+            fields will show dropdowns restricted to these options only.
           </DialogDescription>
         </DialogHeader>
 

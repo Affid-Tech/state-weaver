@@ -29,6 +29,7 @@ export interface Position {
 
 export interface Instrument {
   id: string;
+  revision: string; // Required - from revisions config or free string
   label?: string;
 }
 

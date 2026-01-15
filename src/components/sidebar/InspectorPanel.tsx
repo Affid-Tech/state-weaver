@@ -117,7 +117,8 @@ export function InspectorPanel() {
     return false;
   }, [selectedState, hasTopicEnd]);
 
-  const validationIssues = useMemo(() => validateProject(project), [project]);
+  // Pass fieldConfig to validation
+  const validationIssues = useMemo(() => validateProject(project, fieldConfig), [project, fieldConfig]);
   const errors = validationIssues.filter(i => i.level === 'error');
   const warnings = validationIssues.filter(i => i.level === 'warning');
 
@@ -347,8 +348,7 @@ export function InspectorPanel() {
                             }
                           }}
                           options={revisionOptions}
-                          placeholder="Select or enter revision..."
-                          allowCustom
+                          placeholder="Select revision..."
                         />
                       </div>
 
@@ -364,8 +364,7 @@ export function InspectorPanel() {
                             }
                           }}
                           options={instrumentOptions}
-                          placeholder="Select or enter instrument..."
-                          allowCustom
+                          placeholder="Select instrument..."
                         />
                       </div>
 
@@ -381,8 +380,7 @@ export function InspectorPanel() {
                             }
                           }}
                           options={topicOptions}
-                          placeholder="Select or enter topic..."
-                          allowCustom
+                          placeholder="Select topic..."
                         />
                       </div>
 
@@ -398,8 +396,7 @@ export function InspectorPanel() {
                             }
                           }}
                           options={messageTypeOptions}
-                          placeholder="Select or enter message type..."
-                          allowCustom
+                          placeholder="Select message type..."
                         />
                       </div>
 
@@ -416,7 +413,6 @@ export function InspectorPanel() {
                           }}
                           options={flowTypeOptions}
                           placeholder="Select flow type..."
-                          allowCustom={fieldConfig.flowTypes.length > 0}
                         />
                       </div>
                     </>

@@ -1,4 +1,4 @@
-import type { DiagramProject, TopicData, StateNode, Transition } from '@/types/diagram';
+import type { DiagramProject, TopicData, StateNode, Transition, Instrument, Topic } from '@/types/diagram';
 
 const INLINE_STYLES = `skinparam state {
   BackgroundColor #F8FAFC
@@ -37,17 +37,38 @@ function escapeLabel(label: string): string {
   return label.replace(/"/g, '\\"');
 }
 
-function getTransitionLabel(transition: Transition): string {
+/**
+ * Generate transition label with inheritance rule:
+ * All fields to the right of the most left optional filled field must be filled too.
+ * If revision is specified, instrument and topic MUST be included (inherit from parent if not set).
+ * If instrument is specified (but no revision), topic must follow.
+ */
+function getTransitionLabel(transition: Transition, instrument: Instrument, topic: Topic): string {
   // End transitions have no label
   if (transition.kind === 'endTopic' || transition.kind === 'endInstrument') {
     return '';
   }
+  
   const parts: string[] = [];
-  if (transition.revision) parts.push(transition.revision);
-  if (transition.instrument) parts.push(transition.instrument);
-  if (transition.topic) parts.push(transition.topic);
+  
+  if (transition.revision) {
+    // If revision is specified, instrument and topic MUST follow
+    parts.push(transition.revision);
+    parts.push(transition.instrument || instrument.id);
+    parts.push(transition.topic || topic.id);
+  } else if (transition.instrument) {
+    // If instrument is specified (but no revision), topic must follow
+    parts.push(transition.instrument);
+    parts.push(transition.topic || topic.id);
+  } else if (transition.topic) {
+    // Only topic specified
+    parts.push(transition.topic);
+  }
+  
+  // MessageType and FlowType are always required
   parts.push(transition.messageType);
   parts.push(transition.flowType);
+  
   return parts.join(' ');
 }
 
@@ -137,7 +158,7 @@ export function generateTopicPuml(project: DiagramProject, topicId: string): str
       toAlias = `${instrument.id}.${topic.id}.${transition.to}`;
     }
     
-    const label = getTransitionLabel(transition);
+    const label = getTransitionLabel(transition, instrument, topic);
     if (label) {
       lines.push(`${fromAlias} --> ${toAlias} : ${label}`);
     } else {
@@ -209,7 +230,7 @@ export function generateAggregatePuml(project: DiagramProject): string | null {
           ? 'EndInstrument'
           : `${rootId}.${transition.to}`;
       
-      const label = getTransitionLabel(transition);
+      const label = getTransitionLabel(transition, instrument, rootTopic.topic);
       if (label) {
         lines.push(`    ${fromAlias} --> ${toAlias} : ${label}`);
       } else {
@@ -258,7 +279,7 @@ export function generateAggregatePuml(project: DiagramProject): string | null {
           ? 'EndInstrument'
           : `${topicAlias}.${transition.to}`;
       
-      const label = getTransitionLabel(transition);
+      const label = getTransitionLabel(transition, instrument, topicData.topic);
       if (label) {
         lines.push(`    ${fromAlias} --> ${toAlias} : ${label}`);
       } else {
@@ -303,7 +324,7 @@ export function generateAggregatePuml(project: DiagramProject): string | null {
         ? `${rootId}.End`
         : `${rootId}.${startTransition.to}`;
       
-      const label = getTransitionLabel(startTransition);
+      const label = getTransitionLabel(startTransition, instrument, rootTopic.topic);
       if (label) {
         lines.push(`NewInstrument --> ${toAlias} : ${label}`);
       } else {
