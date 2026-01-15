@@ -9,6 +9,8 @@ export type TransitionKind =
   | 'startInstrument' 
   | 'endInstrument';
 
+export type FlowType = 'B2B' | 'B2C' | 'C2B' | 'C2C';
+
 export type SystemNodeType = 
   | 'TopicStart' 
   | 'TopicEnd' 
@@ -49,8 +51,13 @@ export interface Transition {
   id: string;
   from: string; // state id
   to: string;   // state id
-  label?: string;
   kind: TransitionKind;
+  // Message properties
+  revision?: string; // R1, R2, R3 - optional
+  instrument?: string; // optional
+  topic?: string; // optional
+  messageType: string; // required
+  flowType: FlowType; // required
 }
 
 export interface TopicData {
@@ -78,4 +85,34 @@ export interface ValidationIssue {
   topicId?: string;
   elementId?: string; // state or transition id
   elementType?: 'state' | 'transition';
+}
+
+// Helper to derive transition kind from connected states
+export function deriveTransitionKind(
+  fromState: StateNode | undefined,
+  toState: StateNode | undefined
+): TransitionKind {
+  if (!fromState || !toState) return 'normal';
+  
+  // Starting from NewInstrument
+  if (fromState.systemNodeType === 'NewInstrument') {
+    return 'startInstrument';
+  }
+  
+  // Starting from TopicStart
+  if (fromState.systemNodeType === 'TopicStart') {
+    return 'startTopic';
+  }
+  
+  // Ending at TopicEnd
+  if (toState.systemNodeType === 'TopicEnd') {
+    return 'endTopic';
+  }
+  
+  // Ending at InstrumentEnd
+  if (toState.systemNodeType === 'InstrumentEnd') {
+    return 'endInstrument';
+  }
+  
+  return 'normal';
 }

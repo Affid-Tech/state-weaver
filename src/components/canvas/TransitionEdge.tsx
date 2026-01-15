@@ -6,13 +6,22 @@ import {
   type EdgeProps,
 } from '@xyflow/react';
 import { cn } from '@/lib/utils';
-import type { TransitionKind } from '@/types/diagram';
+import type { Transition } from '@/types/diagram';
 
 interface TransitionEdgeData {
-  label?: string;
-  kind: TransitionKind;
+  transition: Transition;
   isSelected: boolean;
   onSelect: (id: string) => void;
+}
+
+function getTransitionLabel(transition: Transition): string {
+  const parts: string[] = [];
+  if (transition.revision) parts.push(transition.revision);
+  if (transition.instrument) parts.push(transition.instrument);
+  if (transition.topic) parts.push(transition.topic);
+  parts.push(transition.messageType);
+  parts.push(transition.flowType);
+  return parts.join('.');
 }
 
 export const TransitionEdge = memo(({
@@ -36,6 +45,8 @@ export const TransitionEdge = memo(({
   });
 
   const edgeData = data as unknown as TransitionEdgeData | undefined;
+  const transition = edgeData?.transition;
+  const label = transition ? getTransitionLabel(transition) : '';
 
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -56,7 +67,7 @@ export const TransitionEdge = memo(({
         markerEnd="url(#arrow)"
         interactionWidth={20}
       />
-      {edgeData?.label && (
+      {label && (
         <EdgeLabelRenderer>
           <div
             onClick={handleClick}
@@ -69,7 +80,7 @@ export const TransitionEdge = memo(({
               transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
             }}
           >
-            {edgeData.label}
+            {label}
           </div>
         </EdgeLabelRenderer>
       )}

@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useEffect } from 'react';
+import { useCallback, useMemo, useEffect, useState } from 'react';
 import {
   ReactFlow,
   Background,
@@ -19,6 +19,8 @@ import '@xyflow/react/dist/style.css';
 import { useDiagramStore } from '@/store/diagramStore';
 import { StateNodeComponent } from './StateNode';
 import { TransitionEdge } from './TransitionEdge';
+import { NewTransitionDialog } from './NewTransitionDialog';
+import type { FlowType } from '@/types/diagram';
 
 const nodeTypes: NodeTypes = {
   stateNode: StateNodeComponent as any,
@@ -38,6 +40,11 @@ const defaultEdgeOptions = {
   },
 };
 
+interface PendingConnection {
+  source: string;
+  target: string;
+}
+
 export function DiagramCanvas() {
   const {
     project,
@@ -47,6 +54,8 @@ export function DiagramCanvas() {
     addTransition,
     updateStatePosition,
   } = useDiagramStore();
+
+  const [pendingConnection, setPendingConnection] = useState<PendingConnection | null>(null);
 
   const selectedTopicData = useMemo(() => {
     if (!project.selectedTopicId) return null;
@@ -83,8 +92,7 @@ export function DiagramCanvas() {
       target: transition.to,
       type: 'transition',
       data: {
-        label: transition.label,
-        kind: transition.kind,
+        transition,
         isSelected: selectedElementId === transition.id && selectedElementType === 'transition',
         onSelect: handleEdgeSelect,
       },
@@ -103,10 +111,32 @@ export function DiagramCanvas() {
   const onConnect = useCallback(
     (params: Connection) => {
       if (!project.selectedTopicId || !params.source || !params.target) return;
-      addTransition(project.selectedTopicId, params.source, params.target);
+      // Open dialog to collect transition details
+      setPendingConnection({ source: params.source, target: params.target });
     },
-    [project.selectedTopicId, addTransition]
+    [project.selectedTopicId]
   );
+
+  const handleCreateTransition = useCallback(
+    (messageType: string, flowType: FlowType) => {
+      if (!project.selectedTopicId || !pendingConnection) return;
+      const transitionId = addTransition(
+        project.selectedTopicId, 
+        pendingConnection.source, 
+        pendingConnection.target, 
+        messageType, 
+        flowType
+      );
+      setPendingConnection(null);
+      // Select the new transition
+      selectElement(transitionId, 'transition');
+    },
+    [project.selectedTopicId, pendingConnection, addTransition, selectElement]
+  );
+
+  const handleCancelTransition = useCallback(() => {
+    setPendingConnection(null);
+  }, []);
 
   const onNodeDragStop = useCallback(
     (_event: React.MouseEvent, node: Node) => {
@@ -173,6 +203,14 @@ export function DiagramCanvas() {
           </defs>
         </svg>
       </ReactFlow>
+
+      <NewTransitionDialog
+        open={pendingConnection !== null}
+        onOpenChange={(open) => !open && handleCancelTransition()}
+        source={pendingConnection?.source ?? ''}
+        target={pendingConnection?.target ?? ''}
+        onConfirm={handleCreateTransition}
+      />
     </div>
   );
 }

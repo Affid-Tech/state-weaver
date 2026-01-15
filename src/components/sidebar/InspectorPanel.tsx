@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Plus, Trash2, AlertCircle, AlertTriangle } from 'lucide-react';
+import { Plus, Trash2, AlertCircle, AlertTriangle, CircleSlash } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -25,7 +25,20 @@ import { Badge } from '@/components/ui/badge';
 import { useDiagramStore } from '@/store/diagramStore';
 import { validateProject } from '@/lib/validation';
 import { cn } from '@/lib/utils';
-import type { TransitionKind } from '@/types/diagram';
+import type { FlowType } from '@/types/diagram';
+
+const FLOW_TYPES: FlowType[] = ['B2B', 'B2C', 'C2B', 'C2C'];
+const REVISIONS = ['R1', 'R2', 'R3'];
+
+function getTransitionKindLabel(kind: string): string {
+  switch (kind) {
+    case 'startInstrument': return 'Start Instrument';
+    case 'startTopic': return 'Start Topic';
+    case 'endTopic': return 'End Topic';
+    case 'endInstrument': return 'End Instrument';
+    default: return 'Normal';
+  }
+}
 
 export function InspectorPanel() {
   const {
@@ -33,6 +46,7 @@ export function InspectorPanel() {
     selectedElementId,
     selectedElementType,
     addState,
+    addInstrumentEnd,
     updateState,
     deleteState,
     updateTransition,
@@ -59,6 +73,11 @@ export function InspectorPanel() {
     return selectedTopicData.transitions.find(t => t.id === selectedElementId) ?? null;
   }, [selectedTopicData, selectedElementType, selectedElementId]);
 
+  const hasInstrumentEnd = useMemo(() => {
+    if (!selectedTopicData) return false;
+    return selectedTopicData.states.some(s => s.systemNodeType === 'InstrumentEnd');
+  }, [selectedTopicData]);
+
   const validationIssues = useMemo(() => validateProject(project), [project]);
   const errors = validationIssues.filter(i => i.level === 'error');
   const warnings = validationIssues.filter(i => i.level === 'warning');
@@ -69,6 +88,11 @@ export function InspectorPanel() {
     setNewStateId('');
     setNewStateLabel('');
     setIsAddStateOpen(false);
+  };
+
+  const handleAddInstrumentEnd = () => {
+    if (!project.selectedTopicId) return;
+    addInstrumentEnd(project.selectedTopicId);
   };
 
   const handleDeleteState = () => {
@@ -108,7 +132,7 @@ export function InspectorPanel() {
         </TabsList>
 
         <TabsContent value="inspector" className="flex-1 flex flex-col m-0 data-[state=inactive]:hidden">
-          <div className="p-4 border-b border-border">
+          <div className="p-4 border-b border-border space-y-2">
             <Dialog open={isAddStateOpen} onOpenChange={setIsAddStateOpen}>
               <DialogTrigger asChild>
                 <Button className="w-full" disabled={!project.selectedTopicId}>
@@ -151,6 +175,18 @@ export function InspectorPanel() {
                 </DialogFooter>
               </DialogContent>
             </Dialog>
+
+            {!hasInstrumentEnd && (
+              <Button 
+                variant="outline" 
+                className="w-full" 
+                disabled={!project.selectedTopicId}
+                onClick={handleAddInstrumentEnd}
+              >
+                <CircleSlash className="h-4 w-4 mr-2" />
+                Add Instrument End
+              </Button>
+            )}
           </div>
 
           <ScrollArea className="flex-1">
@@ -232,25 +268,90 @@ export function InspectorPanel() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label>Label</Label>
-                    <Input
-                      value={selectedTransition.label || ''}
-                      onChange={(e) => {
+                    <Label>Type (derived)</Label>
+                    <p className="text-sm px-3 py-2 bg-muted rounded-md">
+                      {getTransitionKindLabel(selectedTransition.kind)}
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Revision (optional)</Label>
+                    <Select
+                      value={selectedTransition.revision || ''}
+                      onValueChange={(v) => {
                         if (project.selectedTopicId) {
-                          updateTransition(project.selectedTopicId, selectedTransition.id, { label: e.target.value });
+                          updateTransition(project.selectedTopicId, selectedTransition.id, { 
+                            revision: v || undefined 
+                          });
                         }
                       }}
-                      placeholder="Message label"
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select revision..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">None</SelectItem>
+                        {REVISIONS.map((rev) => (
+                          <SelectItem key={rev} value={rev}>{rev}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Instrument (optional)</Label>
+                    <Input
+                      value={selectedTransition.instrument || ''}
+                      onChange={(e) => {
+                        if (project.selectedTopicId) {
+                          updateTransition(project.selectedTopicId, selectedTransition.id, { 
+                            instrument: e.target.value || undefined 
+                          });
+                        }
+                      }}
+                      placeholder="e.g., pacs.008"
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <Label>Kind</Label>
+                    <Label>Topic (optional)</Label>
+                    <Input
+                      value={selectedTransition.topic || ''}
+                      onChange={(e) => {
+                        if (project.selectedTopicId) {
+                          updateTransition(project.selectedTopicId, selectedTransition.id, { 
+                            topic: e.target.value || undefined 
+                          });
+                        }
+                      }}
+                      placeholder="e.g., Release"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>MessageType *</Label>
+                    <Input
+                      value={selectedTransition.messageType}
+                      onChange={(e) => {
+                        if (project.selectedTopicId) {
+                          updateTransition(project.selectedTopicId, selectedTransition.id, { 
+                            messageType: e.target.value 
+                          });
+                        }
+                      }}
+                      placeholder="e.g., Submit"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>FlowType *</Label>
                     <Select
-                      value={selectedTransition.kind}
+                      value={selectedTransition.flowType}
                       onValueChange={(v) => {
                         if (project.selectedTopicId) {
-                          updateTransition(project.selectedTopicId, selectedTransition.id, { kind: v as TransitionKind });
+                          updateTransition(project.selectedTopicId, selectedTransition.id, { 
+                            flowType: v as FlowType 
+                          });
                         }
                       }}
                     >
@@ -258,11 +359,9 @@ export function InspectorPanel() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="normal">Normal</SelectItem>
-                        <SelectItem value="startTopic">Start Topic</SelectItem>
-                        <SelectItem value="endTopic">End Topic</SelectItem>
-                        <SelectItem value="startInstrument">Start Instrument</SelectItem>
-                        <SelectItem value="endInstrument">End Instrument</SelectItem>
+                        {FLOW_TYPES.map((ft) => (
+                          <SelectItem key={ft} value={ft}>{ft}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
