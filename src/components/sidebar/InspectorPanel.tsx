@@ -277,11 +277,11 @@ export function InspectorPanel() {
                   <div className="space-y-2">
                     <Label>Revision (optional)</Label>
                     <Select
-                      value={selectedTransition.revision || ''}
+                      value={selectedTransition.revision || '__none__'}
                       onValueChange={(v) => {
                         if (project.selectedTopicId) {
                           updateTransition(project.selectedTopicId, selectedTransition.id, { 
-                            revision: v || undefined 
+                            revision: v === '__none__' ? undefined : v 
                           });
                         }
                       }}
@@ -290,7 +290,7 @@ export function InspectorPanel() {
                         <SelectValue placeholder="Select revision..." />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">None</SelectItem>
+                        <SelectItem value="__none__">None</SelectItem>
                         {REVISIONS.map((rev) => (
                           <SelectItem key={rev} value={rev}>{rev}</SelectItem>
                         ))}
