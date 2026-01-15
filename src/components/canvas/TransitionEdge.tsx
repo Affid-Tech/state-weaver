@@ -86,15 +86,23 @@ function generatePath(
   const perpX = -dy / distance;
   const perpY = dx / distance;
   
-  // Apply offset perpendicular to the line
-  const curvature = Math.min(80, Math.max(30, distance * 0.2)) + Math.abs(baseOffset);
-  const curveDirection = baseOffset >= 0 ? 1 : -1;
+  // Calculate total offset: auto offset for multiple edges + manual offset
+  // Manual offset directly controls direction (negative = flip side)
+  const autoOffset = offsetMultiplier * 60;
+  const totalOffset = autoOffset + manualCurveOffset;
+  
+  // Base curvature that scales with distance
+  const baseCurvature = Math.min(60, Math.max(25, distance * 0.15));
+  
+  // Final curvature: base + absolute offset value, direction from sign
+  const curvature = baseCurvature + Math.abs(totalOffset) * 0.5;
+  const direction = totalOffset !== 0 ? Math.sign(totalOffset) : 1;
   
   // Control point
   const midX = (sourceX + targetX) / 2;
   const midY = (sourceY + targetY) / 2;
-  const ctrlX = midX + perpX * curvature * (offsetMultiplier !== 0 ? Math.sign(offsetMultiplier) : curveDirection);
-  const ctrlY = midY + perpY * curvature * (offsetMultiplier !== 0 ? Math.sign(offsetMultiplier) : curveDirection);
+  const ctrlX = midX + perpX * curvature * direction;
+  const ctrlY = midY + perpY * curvature * direction;
   
   // Quadratic bezier curve
   const path = `M ${sourceX} ${sourceY} Q ${ctrlX} ${ctrlY} ${targetX} ${targetY}`;
