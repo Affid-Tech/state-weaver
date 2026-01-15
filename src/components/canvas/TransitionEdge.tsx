@@ -142,7 +142,7 @@ function generateSelfLoopPath(
   return { path, labelX, labelY, ctrlX, ctrlY };
 }
 
-// Generate path with better separation for multiple edges
+// Generate path with handle-aware cubic Bezier for all edges
 function generatePath(
   sourceX: number,
   sourceY: number,
@@ -166,9 +166,6 @@ function generatePath(
     );
   }
 
-  // Calculate offset multiplier - spread edges apart, plus manual offset
-  const offsetMultiplier = totalEdges > 1 ? (edgeIndex - (totalEdges - 1) / 2) : 0;
-
   // Calculate direction vector
   const dx = targetX - sourceX;
   const dy = targetY - sourceY;
@@ -183,35 +180,53 @@ function generatePath(
       ctrlY: sourceY,
     };
   }
+
+  // Get handle direction vectors (default: exit bottom, enter top)
+  const sourceDir = HANDLE_DIRECTIONS[sourceHandle || 'source-bottom'] || { x: 0, y: 1 };
+  const targetDir = HANDLE_DIRECTIONS[targetHandle || 'target-top'] || { x: 0, y: -1 };
   
-  // Perpendicular vector for offset
+  // Calculate offset multiplier for multiple edges
+  const offsetMultiplier = totalEdges > 1 ? (edgeIndex - (totalEdges - 1) / 2) : 0;
+  const autoOffset = offsetMultiplier * 40;
+  const totalOffset = autoOffset + manualCurveOffset;
+  
+  // Control distance scales with edge distance
+  const baseControlDist = Math.min(120, Math.max(50, distance * 0.4));
+  
+  // Control point 1: extends from source in handle direction
+  let ctrl1X = sourceX + sourceDir.x * baseControlDist;
+  let ctrl1Y = sourceY + sourceDir.y * baseControlDist;
+  
+  // Control point 2: extends from target in handle direction
+  let ctrl2X = targetX + targetDir.x * baseControlDist;
+  let ctrl2Y = targetY + targetDir.y * baseControlDist;
+  
+  // Apply perpendicular offset for manual curve control and multiple edges
   const perpX = -dy / distance;
   const perpY = dx / distance;
   
-  // Calculate total offset: auto offset for multiple edges + manual offset
-  const autoOffset = offsetMultiplier * 60;
-  const totalOffset = autoOffset + manualCurveOffset;
+  ctrl1X += perpX * totalOffset;
+  ctrl1Y += perpY * totalOffset;
+  ctrl2X += perpX * totalOffset;
+  ctrl2Y += perpY * totalOffset;
   
-  // Base curvature that scales with distance
-  const baseCurvature = Math.min(60, Math.max(25, distance * 0.15));
+  // Cubic Bezier path
+  const path = `M ${sourceX} ${sourceY} C ${ctrl1X} ${ctrl1Y}, ${ctrl2X} ${ctrl2Y}, ${targetX} ${targetY}`;
   
-  // Final curvature: base + absolute offset value, direction from sign
-  const curvature = baseCurvature + Math.abs(totalOffset) * 0.5;
-  const direction = totalOffset !== 0 ? Math.sign(totalOffset) : 1;
+  // Label at curve midpoint (t=0.5 on cubic bezier)
+  const t = 0.5;
+  const mt = 1 - t;
+  const labelX = mt*mt*mt*sourceX + 3*mt*mt*t*ctrl1X + 3*mt*t*t*ctrl2X + t*t*t*targetX;
+  const labelY = mt*mt*mt*sourceY + 3*mt*mt*t*ctrl1Y + 3*mt*t*t*ctrl2Y + t*t*t*targetY;
   
-  // Control point
-  const midX = (sourceX + targetX) / 2;
-  const midY = (sourceY + targetY) / 2;
-  const ctrlX = midX + perpX * curvature * direction;
-  const ctrlY = midY + perpY * curvature * direction;
-  
-  // Quadratic bezier curve
-  const path = `M ${sourceX} ${sourceY} Q ${ctrlX} ${ctrlY} ${targetX} ${targetY}`;
+  // Control point for dragging (use midpoint between ctrl1 and ctrl2)
+  const ctrlX = (ctrl1X + ctrl2X) / 2;
+  const ctrlY = (ctrl1Y + ctrl2Y) / 2;
   
   return {
     path,
-    labelX: ctrlX,
-    labelY: ctrlY,
+    labelX,
+    labelY,
     ctrlX,
     ctrlY,
   };
