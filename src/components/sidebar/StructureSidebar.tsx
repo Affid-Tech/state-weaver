@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Trash2, Crown, FileText } from 'lucide-react';
+import { Plus, Trash2, Crown, FileText, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -19,11 +19,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from '@/components/ui/context-menu';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Combobox } from '@/components/ui/combobox';
 import { useDiagramStore } from '@/store/diagramStore';
 import { cn } from '@/lib/utils';
-import type { TopicKind } from '@/types/diagram';
+import type { TopicKind, TopicData } from '@/types/diagram';
 
 export function StructureSidebar() {
   const {
@@ -31,6 +38,7 @@ export function StructureSidebar() {
     fieldConfig,
     updateInstrument,
     createTopic,
+    updateTopic,
     deleteTopic,
     selectTopic,
     setRootTopic,
@@ -41,6 +49,12 @@ export function StructureSidebar() {
   const [newTopicLabel, setNewTopicLabel] = useState('');
   const [newTopicKind, setNewTopicKind] = useState<TopicKind>('normal');
 
+  // Edit dialog state
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editingTopic, setEditingTopic] = useState<TopicData | null>(null);
+  const [editTopicId, setEditTopicId] = useState('');
+  const [editTopicLabel, setEditTopicLabel] = useState('');
+
   const handleCreateTopic = () => {
     if (!newTopicId.trim()) return;
     createTopic(newTopicId.trim(), newTopicKind, newTopicLabel.trim() || undefined);
@@ -50,16 +64,31 @@ export function StructureSidebar() {
     setIsCreateDialogOpen(false);
   };
 
-  const handleDeleteTopic = (topicId: string, e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleDeleteTopic = (topicId: string) => {
     if (confirm('Delete this topic and all its states?')) {
       deleteTopic(topicId);
     }
   };
 
-  const handleSetRoot = (topicId: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setRootTopic(topicId);
+  const handleEditTopic = (topicData: TopicData) => {
+    setEditingTopic(topicData);
+    setEditTopicId(topicData.topic.id);
+    setEditTopicLabel(topicData.topic.label || '');
+    setIsEditDialogOpen(true);
+  };
+
+  const handleSaveEdit = () => {
+    if (!editingTopic || !editTopicId.trim()) return;
+    
+    // Update the topic - we need to handle ID change specially
+    // For now, update the topic properties
+    updateTopic(editingTopic.topic.id, {
+      id: editTopicId.trim(),
+      label: editTopicLabel.trim() || undefined,
+    });
+    
+    setIsEditDialogOpen(false);
+    setEditingTopic(null);
   };
 
   return (
@@ -172,57 +201,95 @@ export function StructureSidebar() {
               </p>
             ) : (
               project.topics.map((topicData) => (
-                <div
-                  key={topicData.topic.id}
-                  onClick={() => selectTopic(topicData.topic.id)}
-                  className={cn(
-                    'flex items-center gap-2 px-3 py-2 rounded-md cursor-pointer transition-colors group',
-                    project.selectedTopicId === topicData.topic.id
-                      ? 'bg-sidebar-primary text-sidebar-primary-foreground'
-                      : 'text-sidebar-foreground hover:bg-sidebar-accent'
-                  )}
-                >
-                  <FileText className="h-4 w-4 flex-shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">
-                      {topicData.topic.label || topicData.topic.id}
-                    </p>
-                    {topicData.topic.label && (
-                      <p className="text-xs opacity-70 truncate">{topicData.topic.id}</p>
-                    )}
-                  </div>
-                  {/* Crown toggle for root status */}
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setRootTopic(topicData.topic.id);
-                    }}
-                    className="p-1 rounded hover:bg-sidebar-accent/50 transition-colors flex-shrink-0"
-                    title={topicData.topic.kind === 'root' ? 'Unset as root topic' : 'Set as root topic'}
-                  >
-                    <Crown className={cn(
-                      "h-4 w-4 transition-colors",
-                      topicData.topic.kind === 'root' 
-                        ? "text-yellow-400 fill-yellow-400/20" 
-                        : "text-muted-foreground/40 hover:text-yellow-400/60"
-                    )} />
-                  </button>
-                  <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="h-6 w-6 text-destructive"
-                      onClick={(e) => handleDeleteTopic(topicData.topic.id, e)}
+                <ContextMenu key={topicData.topic.id}>
+                  <ContextMenuTrigger>
+                    <div
+                      onClick={() => selectTopic(topicData.topic.id)}
+                      className={cn(
+                        'flex items-center gap-2 px-3 py-2 rounded-md cursor-pointer transition-colors group',
+                        project.selectedTopicId === topicData.topic.id
+                          ? 'bg-sidebar-primary text-sidebar-primary-foreground'
+                          : 'text-sidebar-foreground hover:bg-sidebar-accent'
+                      )}
                     >
-                      <Trash2 className="h-3 w-3" />
-                    </Button>
-                  </div>
-                </div>
+                      <FileText className="h-4 w-4 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">
+                          {topicData.topic.label || topicData.topic.id}
+                        </p>
+                        {topicData.topic.label && (
+                          <p className="text-xs opacity-70 truncate">{topicData.topic.id}</p>
+                        )}
+                      </div>
+                      {/* Crown indicator for root status */}
+                      {topicData.topic.kind === 'root' && (
+                        <Crown className="h-4 w-4 text-yellow-400 fill-yellow-400/20 flex-shrink-0" />
+                      )}
+                    </div>
+                  </ContextMenuTrigger>
+                  <ContextMenuContent>
+                    <ContextMenuItem onClick={() => handleEditTopic(topicData)}>
+                      <Pencil className="h-4 w-4 mr-2" />
+                      Edit
+                    </ContextMenuItem>
+                    <ContextMenuItem onClick={() => setRootTopic(topicData.topic.id)}>
+                      <Crown className="h-4 w-4 mr-2" />
+                      {topicData.topic.kind === 'root' ? 'Unset Root' : 'Set as Root'}
+                    </ContextMenuItem>
+                    <ContextMenuSeparator />
+                    <ContextMenuItem 
+                      onClick={() => handleDeleteTopic(topicData.topic.id)}
+                      className="text-destructive focus:text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete
+                    </ContextMenuItem>
+                  </ContextMenuContent>
+                </ContextMenu>
               ))
             )}
           </div>
         </ScrollArea>
       </div>
+
+      {/* Edit Topic Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Topic</DialogTitle>
+            <DialogDescription>
+              Update the topic ID and label.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Topic ID *</Label>
+              <Combobox
+                value={editTopicId}
+                onChange={setEditTopicId}
+                options={fieldConfig.topicTypes}
+                placeholder="e.g., Release"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Label (optional)</Label>
+              <Input
+                value={editTopicLabel}
+                onChange={(e) => setEditTopicLabel(e.target.value)}
+                placeholder="Human-friendly name"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveEdit} disabled={!editTopicId.trim()}>
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </aside>
   );
 }
