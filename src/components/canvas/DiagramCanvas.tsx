@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useEffect, useState } from 'react';
+import { useCallback, useMemo, useEffect, useState, useRef } from 'react';
 import {
   ReactFlow,
   Background,
@@ -20,6 +20,7 @@ import {
   ReactFlowProvider,
   NodeChange,
   OnNodesChange,
+  XYPosition,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
@@ -27,6 +28,14 @@ import { useDiagramStore } from '@/store/diagramStore';
 import { StateNodeComponent } from './StateNode';
 import { TransitionEdge } from './TransitionEdge';
 import { NewTransitionDialog } from './NewTransitionDialog';
+import { NewStateDialog } from './NewStateDialog';
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from '@/components/ui/context-menu';
+import { Plus } from 'lucide-react';
 import type { FlowType, StateNode as StateNodeType } from '@/types/diagram';
 
 const nodeTypes: NodeTypes = {
@@ -94,10 +103,15 @@ function DiagramCanvasInner() {
     deleteTransition,
     deleteState,
     updateStatePosition,
+    addState,
   } = useDiagramStore();
 
   const [pendingConnection, setPendingConnection] = useState<PendingConnection | null>(null);
-  const { getNodes } = useReactFlow();
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [newStateDialogOpen, setNewStateDialogOpen] = useState(false);
+  const [newStatePosition, setNewStatePosition] = useState<XYPosition>({ x: 0, y: 0 });
+  const reactFlowWrapper = useRef<HTMLDivElement>(null);
+  const { getNodes, screenToFlowPosition } = useReactFlow();
 
   const selectedTopicData = useMemo(() => {
     if (!project.selectedTopicId) return null;
@@ -121,10 +135,11 @@ function DiagramCanvasInner() {
       data: {
         state,
         isSelected: selectedElementId === state.id && selectedElementType === 'state',
+        isConnecting,
         onSelect: handleNodeSelect,
       },
     }));
-  }, [selectedTopicData, selectedElementId, selectedElementType, handleNodeSelect]);
+  }, [selectedTopicData, selectedElementId, selectedElementType, handleNodeSelect, isConnecting]);
 
   // Compute edge indices for proper offset rendering
   const edgeIndices = useMemo(() => {
@@ -292,6 +307,34 @@ function DiagramCanvasInner() {
     selectElement(null, null);
   }, [selectElement]);
 
+  // Connection mode handlers
+  const onConnectStart = useCallback(() => {
+    setIsConnecting(true);
+  }, []);
+
+  const onConnectEnd = useCallback(() => {
+    setIsConnecting(false);
+  }, []);
+
+  // Context menu handler for new state
+  const handleContextMenuNewState = useCallback((e: React.MouseEvent) => {
+    if (!project.selectedTopicId || !reactFlowWrapper.current) return;
+    
+    const bounds = reactFlowWrapper.current.getBoundingClientRect();
+    const position = screenToFlowPosition({
+      x: e.clientX,
+      y: e.clientY,
+    });
+    setNewStatePosition(position);
+    setNewStateDialogOpen(true);
+  }, [project.selectedTopicId, screenToFlowPosition]);
+
+  const handleCreateState = useCallback((id: string, label?: string) => {
+    if (!project.selectedTopicId) return;
+    addState(project.selectedTopicId, id, label, newStatePosition);
+    setNewStateDialogOpen(false);
+  }, [project.selectedTopicId, addState, newStatePosition]);
+
   // Handle edge reconnection (detach and reattach to different nodes)
   const onReconnect = useCallback(
     (oldEdge: Edge, newConnection: Connection) => {
@@ -344,52 +387,66 @@ function DiagramCanvasInner() {
   }
 
   return (
-    <div className="flex-1 h-full">
-      <ReactFlow
-        nodes={nodes}
-        edges={edges}
-        onNodesChange={onNodesChange}
-        onEdgesChange={handleEdgesChange}
-        onConnect={onConnect}
-        onReconnect={onReconnect}
-        onNodeDragStop={onNodeDragStop}
-        onPaneClick={onPaneClick}
-        nodeTypes={nodeTypes}
-        edgeTypes={edgeTypes}
-        defaultEdgeOptions={defaultEdgeOptions}
-        fitView
-        proOptions={{ hideAttribution: true }}
-        edgesReconnectable
-        selectionOnDrag
-        selectNodesOnDrag
-        multiSelectionKeyCode="Shift"
-      >
-        <Background variant={BackgroundVariant.Dots} gap={20} size={1} />
-        <Controls />
-        <MiniMap 
-          nodeStrokeWidth={3}
-          pannable
-          zoomable
-        />
-        <svg>
-          <defs>
-            <marker
-              id="arrow"
-              viewBox="0 0 10 10"
-              refX="8"
-              refY="5"
-              markerWidth="6"
-              markerHeight="6"
-              orient="auto-start-reverse"
+    <div className="flex-1 h-full" ref={reactFlowWrapper}>
+      <ContextMenu>
+        <ContextMenuTrigger asChild>
+          <div className="h-full">
+            <ReactFlow
+              nodes={nodes}
+              edges={edges}
+              onNodesChange={onNodesChange}
+              onEdgesChange={handleEdgesChange}
+              onConnect={onConnect}
+              onConnectStart={onConnectStart}
+              onConnectEnd={onConnectEnd}
+              onReconnect={onReconnect}
+              onNodeDragStop={onNodeDragStop}
+              onPaneClick={onPaneClick}
+              nodeTypes={nodeTypes}
+              edgeTypes={edgeTypes}
+              defaultEdgeOptions={defaultEdgeOptions}
+              fitView
+              proOptions={{ hideAttribution: true }}
+              edgesReconnectable
+              selectionOnDrag
+              selectNodesOnDrag
+              multiSelectionKeyCode="Shift"
             >
-              <path
-                d="M 0 0 L 10 5 L 0 10 z"
-                fill="hsl(215, 16%, 47%)"
+              <Background variant={BackgroundVariant.Dots} gap={20} size={1} />
+              <Controls />
+              <MiniMap 
+                nodeStrokeWidth={3}
+                pannable
+                zoomable
               />
-            </marker>
-          </defs>
-        </svg>
-      </ReactFlow>
+              <svg>
+                <defs>
+                  <marker
+                    id="arrow"
+                    viewBox="0 0 10 10"
+                    refX="8"
+                    refY="5"
+                    markerWidth="6"
+                    markerHeight="6"
+                    orient="auto-start-reverse"
+                  >
+                    <path
+                      d="M 0 0 L 10 5 L 0 10 z"
+                      fill="hsl(215, 16%, 47%)"
+                    />
+                  </marker>
+                </defs>
+              </svg>
+            </ReactFlow>
+          </div>
+        </ContextMenuTrigger>
+        <ContextMenuContent>
+          <ContextMenuItem onClick={handleContextMenuNewState}>
+            <Plus className="h-4 w-4 mr-2" />
+            New State
+          </ContextMenuItem>
+        </ContextMenuContent>
+      </ContextMenu>
 
       <NewTransitionDialog
         open={pendingConnection !== null}
@@ -397,6 +454,12 @@ function DiagramCanvasInner() {
         source={pendingConnection?.source ?? ''}
         target={pendingConnection?.target ?? ''}
         onConfirm={handleCreateTransition}
+      />
+
+      <NewStateDialog
+        open={newStateDialogOpen}
+        onOpenChange={setNewStateDialogOpen}
+        onConfirm={handleCreateState}
       />
     </div>
   );
