@@ -49,20 +49,21 @@ function getTransitionKindLabel(kind: string): string {
 }
 
 export function InspectorPanel() {
-  const {
-    project,
-    selectedElementId,
-    selectedElementType,
-    fieldConfig,
-    addState,
-    addInstrumentEnd,
-    updateState,
-    deleteState,
-    updateTransition,
-    updateTransitionRouting,
-    deleteTransition,
-    selectElement,
-  } = useDiagramStore();
+  // Use selectors for reactive access
+  const project = useDiagramStore(s => s.getActiveProject());
+  const selectedElementId = useDiagramStore(s => s.selectedElementId);
+  const selectedElementType = useDiagramStore(s => s.selectedElementType);
+  const fieldConfig = useDiagramStore(s => s.fieldConfig);
+  const addState = useDiagramStore(s => s.addState);
+  const addInstrumentEnd = useDiagramStore(s => s.addInstrumentEnd);
+  const addTopicEnd = useDiagramStore(s => s.addTopicEnd);
+  const updateState = useDiagramStore(s => s.updateState);
+  const deleteState = useDiagramStore(s => s.deleteState);
+  const updateTransition = useDiagramStore(s => s.updateTransition);
+  const updateTransitionRouting = useDiagramStore(s => s.updateTransitionRouting);
+  const deleteTransition = useDiagramStore(s => s.deleteTransition);
+  const selectElement = useDiagramStore(s => s.selectElement);
+  const selectTopic = useDiagramStore(s => s.selectTopic);
 
   // Derive available options from fieldConfig with fallbacks
   const revisionOptions = fieldConfig.revisions;
@@ -77,9 +78,9 @@ export function InspectorPanel() {
   const [newStateLabel, setNewStateLabel] = useState('');
 
   const selectedTopicData = useMemo(() => {
-    if (!project.selectedTopicId) return null;
+    if (!project?.selectedTopicId) return null;
     return project.topics.find(t => t.topic.id === project.selectedTopicId) ?? null;
-  }, [project.selectedTopicId, project.topics]);
+  }, [project?.selectedTopicId, project?.topics]);
 
   const selectedState = useMemo(() => {
     if (!selectedTopicData || selectedElementType !== 'state' || !selectedElementId) return null;
@@ -117,37 +118,36 @@ export function InspectorPanel() {
   }, [selectedState, hasTopicEnd]);
 
   // Pass fieldConfig to validation
-  const validationIssues = useMemo(() => validateProject(project, fieldConfig), [project, fieldConfig]);
+  const validationIssues = useMemo(() => project ? validateProject(project, fieldConfig) : [], [project, fieldConfig]);
   const errors = validationIssues.filter(i => i.level === 'error');
   const warnings = validationIssues.filter(i => i.level === 'warning');
 
   const handleAddState = () => {
-    if (!project.selectedTopicId || !newStateLabel.trim()) return;
+    if (!project?.selectedTopicId || !newStateLabel.trim()) return;
     addState(project.selectedTopicId, newStateLabel.trim());
     setNewStateLabel('');
     setIsAddStateOpen(false);
   };
 
   const handleAddInstrumentEnd = () => {
-    if (!project.selectedTopicId) return;
+    if (!project?.selectedTopicId) return;
     addInstrumentEnd(project.selectedTopicId);
   };
 
   const handleAddTopicEnd = () => {
-    if (!project.selectedTopicId) return;
-    // Add Topic End node - need to add this to the store
-    useDiagramStore.getState().addTopicEnd(project.selectedTopicId);
+    if (!project?.selectedTopicId) return;
+    addTopicEnd(project.selectedTopicId);
   };
 
   const handleDeleteState = () => {
-    if (!project.selectedTopicId || !selectedElementId || selectedElementType !== 'state') return;
+    if (!project?.selectedTopicId || !selectedElementId || selectedElementType !== 'state') return;
     if (!canDeleteSelectedState) return;
     deleteState(project.selectedTopicId, selectedElementId);
     selectElement(null, null);
   };
 
   const handleDeleteTransition = () => {
-    if (!project.selectedTopicId || !selectedElementId || selectedElementType !== 'transition') return;
+    if (!project?.selectedTopicId || !selectedElementId || selectedElementType !== 'transition') return;
     deleteTransition(project.selectedTopicId, selectedElementId);
     selectElement(null, null);
   };

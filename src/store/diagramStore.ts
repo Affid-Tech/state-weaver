@@ -78,9 +78,6 @@ interface DiagramState {
   
   // Computed helper
   getActiveProject: () => DiagramProject | null;
-  
-  // Deprecated - for backward compatibility
-  project: DiagramProject;
 }
 
 const createSystemNodes = (kind: TopicKind): StateNode[] => {
@@ -144,118 +141,17 @@ const createNewProject = (instrument: Partial<Instrument> = {}): DiagramProject 
   };
 };
 
-const createSampleProject = (): DiagramProject => {
-  const projectId = uuidv4();
-  return {
-    id: projectId,
-    name: 'Payment Processing',
-    instrument: { 
-      type: 'pacs_008', 
-      revision: 'R1', 
-      label: 'PACS 008 Payment',
-      description: 'ISO 20022 payment message for credit transfers between financial institutions'
-    },
-    topics: [
-      {
-        topic: { id: 'Release', label: 'Payment Release', kind: 'root' },
-        states: [
-          {
-            id: 'NewInstrument',
-            label: 'New Instrument',
-            stereotype: 'NewInstrument',
-            position: { x: 250, y: 50 },
-            isSystemNode: true,
-            systemNodeType: 'NewInstrument',
-          },
-          {
-            id: 'TopicEnd',
-            label: 'Topic End',
-            stereotype: 'End',
-            position: { x: 250, y: 400 },
-            isSystemNode: true,
-            systemNodeType: 'TopicEnd',
-          },
-          {
-            id: 'InstrumentEnd',
-            label: 'Instrument End',
-            stereotype: 'End',
-            position: { x: 500, y: 400 },
-            isSystemNode: true,
-            systemNodeType: 'InstrumentEnd',
-          },
-          {
-            id: uuidv4(),
-            label: 'Submitted',
-            stereotype: 'Submitted',
-            position: { x: 250, y: 150 },
-            isSystemNode: false,
-          },
-          {
-            id: uuidv4(),
-            label: 'Validated',
-            stereotype: 'Validated',
-            position: { x: 250, y: 250 },
-            isSystemNode: false,
-          },
-          {
-            id: uuidv4(),
-            label: 'Rejected',
-            stereotype: 'Rejected',
-            position: { x: 450, y: 200 },
-            isSystemNode: false,
-          },
-        ],
-        transitions: [],
-      },
-    ],
-    selectedTopicId: 'Release',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  };
-};
-
-// Get IDs for transitions after creating sample states
-const initializeSampleProject = (): DiagramProject => {
-  const project = createSampleProject();
-  const topic = project.topics[0];
-  const states = topic.states;
-  
-  // Find user states by label
-  const submitted = states.find(s => s.label === 'Submitted');
-  const validated = states.find(s => s.label === 'Validated');
-  const rejected = states.find(s => s.label === 'Rejected');
-  
-  if (submitted && validated && rejected) {
-    topic.transitions = [
-      { id: uuidv4(), from: 'NewInstrument', to: submitted.id, kind: 'startInstrument', messageType: 'pacs_008', flowType: 'B2B', sourceHandleId: 'source-bottom', targetHandleId: 'target-top' },
-      { id: uuidv4(), from: submitted.id, to: validated.id, kind: 'normal', messageType: 'validate', flowType: 'B2B', sourceHandleId: 'source-bottom', targetHandleId: 'target-top' },
-      { id: uuidv4(), from: submitted.id, to: rejected.id, kind: 'normal', messageType: 'reject', flowType: 'B2B', sourceHandleId: 'source-right', targetHandleId: 'target-left' },
-      { id: uuidv4(), from: validated.id, to: 'TopicEnd', kind: 'endTopic', messageType: '', flowType: 'B2B', sourceHandleId: 'source-bottom', targetHandleId: 'target-top' },
-      { id: uuidv4(), from: rejected.id, to: 'InstrumentEnd', kind: 'endInstrument', messageType: '', flowType: 'B2B', sourceHandleId: 'source-bottom', targetHandleId: 'target-top' },
-    ];
-  }
-  
-  return project;
-};
-
 export const useDiagramStore = create<DiagramState>()(
   persist(
     immer((set, get) => {
-      const sampleProject = initializeSampleProject();
-      
       return {
-        projects: [sampleProject],
-        activeProjectId: sampleProject.id,
+        // Start with empty workspace - no sample project
+        projects: [],
+        activeProjectId: null,
         selectedElementId: null,
         selectedElementType: null,
         viewMode: 'topic',
         fieldConfig: DEFAULT_FIELD_CONFIG,
-        
-        // Computed property for backward compatibility
-        get project() {
-          const state = get();
-          return state.projects.find(p => p.id === state.activeProjectId) || state.projects[0];
-        },
 
         getActiveProject: () => {
           const state = get();
@@ -513,11 +409,7 @@ export const useDiagramStore = create<DiagramState>()(
           const topicData = project.topics.find(t => t.topic.id === topicId);
           if (topicData) {
             const stateNode = topicData.states.find(s => s.id === stateId);
-            const isInstrumentEnd = stateNode?.systemNodeType === 'InstrumentEnd';
-            const hasTopicEnd = topicData.states.some(s => s.systemNodeType === 'TopicEnd');
-            const canDeleteSystemNode = isInstrumentEnd && hasTopicEnd;
-            
-            if (stateNode && (!stateNode.isSystemNode || canDeleteSystemNode)) {
+            if (stateNode && !stateNode.isSystemNode) {
               topicData.states = topicData.states.filter(s => s.id !== stateId);
               topicData.transitions = topicData.transitions.filter(
                 t => t.from !== stateId && t.to !== stateId
@@ -542,7 +434,7 @@ export const useDiagramStore = create<DiagramState>()(
         }),
         
         addTransition: (topicId, from, to, messageType, flowType, sourceHandleId, targetHandleId) => {
-          let transitionId = '';
+          const transitionId = uuidv4();
           set((state) => {
             const project = state.projects.find(p => p.id === state.activeProjectId);
             if (!project) return;
@@ -553,18 +445,16 @@ export const useDiagramStore = create<DiagramState>()(
               const toState = topicData.states.find(s => s.id === to);
               const kind = deriveTransitionKind(fromState, toState);
               
-              transitionId = uuidv4();
-              const transition: Transition = {
+              topicData.transitions.push({
                 id: transitionId,
                 from,
                 to,
                 kind,
                 messageType,
                 flowType,
-                sourceHandleId: sourceHandleId || 'source-bottom',
-                targetHandleId: targetHandleId || 'target-top',
-              };
-              topicData.transitions.push(transition);
+                sourceHandleId,
+                targetHandleId,
+              });
               project.updatedAt = new Date().toISOString();
             }
           });
@@ -579,16 +469,14 @@ export const useDiagramStore = create<DiagramState>()(
           if (topicData) {
             const transition = topicData.transitions.find(t => t.id === transitionId);
             if (transition) {
-              const { from, to, ...otherUpdates } = updates;
-              Object.assign(transition, otherUpdates);
+              const { kind: _kind, ...safeUpdates } = updates as Partial<Transition>;
+              Object.assign(transition, safeUpdates);
               
-              if (from !== undefined) transition.from = from;
-              if (to !== undefined) transition.to = to;
-              
-              const fromState = topicData.states.find(s => s.id === transition.from);
-              const toState = topicData.states.find(s => s.id === transition.to);
-              transition.kind = deriveTransitionKind(fromState, toState);
-              
+              if (updates.from !== undefined || updates.to !== undefined) {
+                const fromState = topicData.states.find(s => s.id === transition.from);
+                const toState = topicData.states.find(s => s.id === transition.to);
+                transition.kind = deriveTransitionKind(fromState, toState);
+              }
               project.updatedAt = new Date().toISOString();
             }
           }
@@ -604,7 +492,7 @@ export const useDiagramStore = create<DiagramState>()(
             project.updatedAt = new Date().toISOString();
           }
         }),
-
+        
         updateTransitionRouting: (topicId, transitionId, sourceHandleId, targetHandleId, curveOffset) => set((state) => {
           const project = state.projects.find(p => p.id === state.activeProjectId);
           if (!project) return;
@@ -631,19 +519,19 @@ export const useDiagramStore = create<DiagramState>()(
         }),
         
         updateFieldConfig: (config) => set((state) => {
-          state.fieldConfig = { ...state.fieldConfig, ...config };
+          Object.assign(state.fieldConfig, config);
         }),
         
         exportProject: () => {
           const state = get();
           const project = state.projects.find(p => p.id === state.activeProjectId);
-          return JSON.stringify(project, null, 2);
+          return project ? JSON.stringify(project, null, 2) : '';
         },
         
         importProject: (json) => {
           try {
             const project = JSON.parse(json) as DiagramProject;
-            // Assign new ID to avoid conflicts
+            // Give it a new ID to avoid conflicts
             project.id = uuidv4();
             project.updatedAt = new Date().toISOString();
             
@@ -659,20 +547,38 @@ export const useDiagramStore = create<DiagramState>()(
           }
         },
         
-        resetProject: () => {
-          const newProject = initializeSampleProject();
-          set({
-            projects: [newProject],
-            activeProjectId: newProject.id,
-            selectedElementId: null,
-            selectedElementType: null,
-            viewMode: 'topic',
-          });
-        },
+        resetProject: () => set((state) => {
+          // Reset to empty workspace
+          state.projects = [];
+          state.activeProjectId = null;
+          state.selectedElementId = null;
+          state.selectedElementType = null;
+        }),
       };
     }),
     {
-      name: 'diagram-project',
+      name: 'diagram-workspace', // Fresh key to avoid old corrupted state
+      partialize: (state) => ({
+        projects: state.projects,
+        activeProjectId: state.activeProjectId,
+        selectedElementId: state.selectedElementId,
+        selectedElementType: state.selectedElementType,
+        viewMode: state.viewMode,
+        fieldConfig: state.fieldConfig,
+      }),
+      onRehydrateStorage: () => (state) => {
+        // Fix up any inconsistent state after rehydration
+        if (state) {
+          // If activeProjectId points to non-existent project, fix it
+          if (state.activeProjectId && !state.projects.some(p => p.id === state.activeProjectId)) {
+            state.activeProjectId = state.projects[0]?.id || null;
+          }
+          // If no active project but projects exist, select first
+          if (!state.activeProjectId && state.projects.length > 0) {
+            state.activeProjectId = state.projects[0].id;
+          }
+        }
+      },
     }
   )
 );
