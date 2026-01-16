@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo } from 'react';
+import { useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   FileText,
@@ -9,7 +9,6 @@ import {
   ArrowLeft,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,31 +21,25 @@ import { generateTopicPuml, generateAggregatePuml } from '@/lib/pumlGenerator';
 import { validateProject, hasBlockingErrors } from '@/lib/validation';
 import { toast } from 'sonner';
 import { FieldConfigDialog } from '@/components/settings/FieldConfigDialog';
+import { useState } from 'react';
 
 export function TopBar() {
   const navigate = useNavigate();
   const {
     project,
     viewMode,
-    updateProjectName,
     exportProject,
     importProject,
   } = useDiagramStore();
 
-  const [isEditing, setIsEditing] = useState(false);
-  const [editName, setEditName] = useState(project.name);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const validationIssues = useMemo(() => validateProject(project), [project]);
   const hasErrors = hasBlockingErrors(validationIssues);
 
-  const handleNameSubmit = () => {
-    if (editName.trim()) {
-      updateProjectName(editName.trim());
-    }
-    setIsEditing(false);
-  };
+  // Display name: use label if available, otherwise type
+  const displayName = project.instrument.label || project.instrument.type;
 
   const handleExportJson = () => {
     const json = exportProject();
@@ -54,7 +47,7 @@ export function TopBar() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${project.name.replace(/\s+/g, '_')}.json`;
+    a.download = `${project.instrument.type}_${project.instrument.revision}.json`;
     a.click();
     URL.revokeObjectURL(url);
     toast.success('Project exported as JSON');
@@ -71,10 +64,10 @@ export function TopBar() {
 
     if (viewMode === 'aggregate') {
       puml = generateAggregatePuml(project);
-      filename = `${project.instrument.id}_aggregate.puml`;
+      filename = `${project.instrument.type}_aggregate.puml`;
     } else if (project.selectedTopicId) {
       puml = generateTopicPuml(project, project.selectedTopicId);
-      filename = `${project.instrument.id}_${project.selectedTopicId}.puml`;
+      filename = `${project.instrument.type}_${project.selectedTopicId}.puml`;
     }
 
     if (!puml) {
@@ -126,26 +119,9 @@ export function TopBar() {
         
         <div className="flex items-center gap-2">
           <FileText className="h-5 w-5 text-primary" />
-          {isEditing ? (
-            <Input
-              value={editName}
-              onChange={(e) => setEditName(e.target.value)}
-              onBlur={handleNameSubmit}
-              onKeyDown={(e) => e.key === 'Enter' && handleNameSubmit()}
-              className="h-8 w-48"
-              autoFocus
-            />
-          ) : (
-            <button
-              onClick={() => {
-                setEditName(project.name);
-                setIsEditing(true);
-              }}
-              className="text-lg font-semibold hover:text-primary transition-colors"
-            >
-              {project.name}
-            </button>
-          )}
+          <span className="text-lg font-semibold">
+            {displayName} / {project.instrument.revision}
+          </span>
         </div>
 
         <div className="flex items-center gap-1 ml-4">

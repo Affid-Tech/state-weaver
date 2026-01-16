@@ -1,5 +1,5 @@
 import { formatDistanceToNow } from 'date-fns';
-import { MoreVertical, Copy, Trash2, Edit2, Layers } from 'lucide-react';
+import { MoreVertical, Copy, Trash2, Edit2, Layers, Settings2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -15,11 +15,12 @@ import type { DiagramProject } from '@/types/diagram';
 interface InstrumentCardProps {
   project: DiagramProject;
   onEdit: (projectId: string) => void;
+  onEditDetails: (projectId: string) => void;
   onDuplicate: (projectId: string) => void;
   onDelete: (projectId: string) => void;
 }
 
-export function InstrumentCard({ project, onEdit, onDuplicate, onDelete }: InstrumentCardProps) {
+export function InstrumentCard({ project, onEdit, onEditDetails, onDuplicate, onDelete }: InstrumentCardProps) {
   const topicCount = project.topics.length;
   const updatedAgo = formatDistanceToNow(new Date(project.updatedAt), { addSuffix: true });
   
@@ -31,7 +32,7 @@ export function InstrumentCard({ project, onEdit, onDuplicate, onDelete }: Instr
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div className="space-y-1 flex-1 min-w-0">
-            <CardTitle className="text-lg truncate">{project.instrument.id}</CardTitle>
+            <CardTitle className="text-lg truncate">{project.instrument.type}</CardTitle>
             <div className="flex items-center gap-2">
               <Badge variant="secondary" className="text-xs">
                 {project.instrument.revision}
@@ -56,7 +57,11 @@ export function InstrumentCard({ project, onEdit, onDuplicate, onDelete }: Instr
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onEdit(project.id); }}>
                 <Edit2 className="h-4 w-4 mr-2" />
-                Edit
+                Open Editor
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onEditDetails(project.id); }}>
+                <Settings2 className="h-4 w-4 mr-2" />
+                Edit Details
               </DropdownMenuItem>
               <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onDuplicate(project.id); }}>
                 <Copy className="h-4 w-4 mr-2" />

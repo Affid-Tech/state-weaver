@@ -36,7 +36,6 @@ export function StructureSidebar() {
   const {
     project,
     fieldConfig,
-    updateInstrument,
     createTopic,
     updateTopic,
     deleteTopic,
@@ -80,8 +79,6 @@ export function StructureSidebar() {
   const handleSaveEdit = () => {
     if (!editingTopic || !editTopicId.trim()) return;
     
-    // Update the topic - we need to handle ID change specially
-    // For now, update the topic properties
     updateTopic(editingTopic.topic.id, {
       id: editTopicId.trim(),
       label: editTopicLabel.trim() || undefined,
@@ -93,47 +90,9 @@ export function StructureSidebar() {
 
   return (
     <aside className="w-64 bg-sidebar border-r border-sidebar-border flex flex-col">
-      {/* Instrument Section */}
-      <div className="p-4 border-b border-sidebar-border">
-        <Label className="text-xs text-sidebar-muted-foreground uppercase tracking-wider mb-3 block">
-          Instrument
-        </Label>
-        <div className="space-y-3">
-          <div className="space-y-1">
-            <Label className="text-xs text-sidebar-muted-foreground">ID *</Label>
-            <Combobox
-              value={project.instrument.id}
-              onChange={(v) => updateInstrument({ id: v })}
-              options={fieldConfig.instrumentTypes}
-              placeholder="e.g., pacs_008"
-              className="bg-sidebar-accent border-sidebar-border text-sidebar-foreground"
-            />
-          </div>
-          <div className="space-y-1">
-            <Label className="text-xs text-sidebar-muted-foreground">Revision *</Label>
-            <Combobox
-              value={project.instrument.revision || ''}
-              onChange={(v) => updateInstrument({ revision: v })}
-              options={fieldConfig.revisions}
-              placeholder="e.g., R1"
-              className="bg-sidebar-accent border-sidebar-border text-sidebar-foreground"
-            />
-          </div>
-          <div className="space-y-1">
-            <Label className="text-xs text-sidebar-muted-foreground">Label (optional)</Label>
-            <Input
-              value={project.instrument.label || ''}
-              onChange={(e) => updateInstrument({ label: e.target.value })}
-              placeholder="e.g., PACS 008 Payment"
-              className="bg-sidebar-accent border-sidebar-border text-sidebar-foreground placeholder:text-sidebar-muted-foreground"
-            />
-          </div>
-        </div>
-      </div>
-
       {/* Topics Section */}
       <div className="flex-1 flex flex-col min-h-0">
-        <div className="p-4 flex items-center justify-between">
+        <div className="p-4 flex items-center justify-between border-b border-sidebar-border">
           <Label className="text-xs text-sidebar-muted-foreground uppercase tracking-wider">
             Topics
           </Label>
@@ -194,7 +153,7 @@ export function StructureSidebar() {
         </div>
 
         <ScrollArea className="flex-1">
-          <div className="px-2 pb-4 space-y-1">
+          <div className="px-2 py-4 space-y-1">
             {project.topics.length === 0 ? (
               <p className="text-sm text-sidebar-muted-foreground text-center py-8 px-4">
                 No topics yet. Click + to create one.
