@@ -336,9 +336,9 @@ function DiagramCanvasInner() {
     setNewStateDialogOpen(true);
   }, [project.selectedTopicId, screenToFlowPosition]);
 
-  const handleCreateState = useCallback((id: string, label?: string) => {
+  const handleCreateState = useCallback((label: string) => {
     if (!project.selectedTopicId) return;
-    addState(project.selectedTopicId, id, label, newStatePosition);
+    addState(project.selectedTopicId, label, newStatePosition);
     setNewStateDialogOpen(false);
   }, [project.selectedTopicId, addState, newStatePosition]);
 

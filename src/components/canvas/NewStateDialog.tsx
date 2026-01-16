@@ -14,23 +14,20 @@ import {
 interface NewStateDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onConfirm: (id: string, label?: string) => void;
+  onConfirm: (label: string) => void;
 }
 
 export function NewStateDialog({ open, onOpenChange, onConfirm }: NewStateDialogProps) {
-  const [stateId, setStateId] = useState('');
   const [stateLabel, setStateLabel] = useState('');
 
   const handleConfirm = () => {
-    if (!stateId.trim()) return;
-    onConfirm(stateId.trim(), stateLabel.trim() || undefined);
-    setStateId('');
+    if (!stateLabel.trim()) return;
+    onConfirm(stateLabel.trim());
     setStateLabel('');
     onOpenChange(false);
   };
 
   const handleCancel = () => {
-    setStateId('');
     setStateLabel('');
     onOpenChange(false);
   };
@@ -46,28 +43,23 @@ export function NewStateDialog({ open, onOpenChange, onConfirm }: NewStateDialog
         </DialogHeader>
         <div className="space-y-4 py-4">
           <div className="space-y-2">
-            <Label>State ID *</Label>
-            <Input
-              value={stateId}
-              onChange={(e) => setStateId(e.target.value)}
-              placeholder="e.g., Validated"
-              autoFocus
-            />
-          </div>
-          <div className="space-y-2">
-            <Label>Label (optional)</Label>
+            <Label>State Label *</Label>
             <Input
               value={stateLabel}
               onChange={(e) => setStateLabel(e.target.value)}
-              placeholder="Human-friendly name"
+              placeholder="e.g., Payment Submitted"
+              autoFocus
             />
+            <p className="text-xs text-muted-foreground">
+              The label will be converted to a PUML-safe ID automatically.
+            </p>
           </div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={handleCancel}>
             Cancel
           </Button>
-          <Button onClick={handleConfirm} disabled={!stateId.trim()}>
+          <Button onClick={handleConfirm} disabled={!stateLabel.trim()}>
             Create State
           </Button>
         </DialogFooter>

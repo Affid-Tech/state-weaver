@@ -1,4 +1,5 @@
 import type { DiagramProject, TopicData, StateNode, Transition, Instrument, Topic } from '@/types/diagram';
+import { labelToEnumId } from '@/types/diagram';
 
 const INLINE_STYLES = `skinparam state {
   BackgroundColor #F8FAFC
@@ -37,6 +38,16 @@ function escapeLabel(label: string): string {
   return label.replace(/"/g, '\\"');
 }
 
+// Get PUML-safe state ID from a StateNode
+function getStateEnumId(state: StateNode): string {
+  if (state.isSystemNode) {
+    // System nodes keep their fixed IDs
+    return state.id;
+  }
+  // User-created states derive ID from label
+  return labelToEnumId(state.label);
+}
+
 /**
  * Generate transition label with inheritance rule:
  * All fields to the right of the most left optional filled field must be filled too.
@@ -54,7 +65,7 @@ function getTransitionLabel(transition: Transition, instrument: Instrument, topi
   if (transition.revision) {
     // If revision is specified, instrument and topic MUST follow
     parts.push(transition.revision);
-    parts.push(transition.instrument || instrument.id);
+    parts.push(transition.instrument || instrument.type);
     parts.push(transition.topic || topic.id);
   } else if (transition.instrument) {
     // If instrument is specified (but no revision), topic must follow
@@ -83,7 +94,7 @@ export function generateTopicPuml(project: DiagramProject, topicId: string): str
   lines.push('@startuml');
   lines.push('');
   lines.push(`' Topic: ${topic.label || topic.id}`);
-  lines.push(`' Instrument: ${instrument.label || instrument.id}`);
+  lines.push(`' Instrument: ${instrument.label || instrument.type}`);
   lines.push('');
   lines.push(INLINE_STYLES);
   lines.push('');
@@ -107,19 +118,20 @@ export function generateTopicPuml(project: DiagramProject, topicId: string): str
 
   // Regular states within topic
   states.forEach((state) => {
-    const qualifiedId = `${instrument.id}.${topic.id}.${state.id}`;
+    const stateEnumId = getStateEnumId(state);
+    const qualifiedId = `${instrument.type}.${topic.id}.${stateEnumId}`;
     
     if (state.systemNodeType === 'NewInstrument') {
       // Already declared at top level
     } else if (state.systemNodeType === 'TopicStart') {
-      lines.push(`state ${instrument.id}.${topic.id}.Start as "Topic Start" <<entryPoint>>`);
+      lines.push(`state ${instrument.type}.${topic.id}.Start as "Topic Start" <<entryPoint>>`);
     } else if (state.systemNodeType === 'TopicEnd') {
-      lines.push(`state ${instrument.id}.${topic.id}.End as "Topic End" <<exitPoint>>`);
+      lines.push(`state ${instrument.type}.${topic.id}.End as "Topic End" <<exitPoint>>`);
     } else if (state.systemNodeType === 'InstrumentEnd') {
       // Already declared at top level
     } else {
-      const label = state.label || state.id;
-      const stereotype = state.stereotype || state.id;
+      const label = state.label;
+      const stereotype = state.stereotype || stateEnumId;
       lines.push(`state "${escapeLabel(label)}" as ${qualifiedId} <<${stereotype}>>`);
     }
   });
@@ -136,26 +148,30 @@ export function generateTopicPuml(project: DiagramProject, topicId: string): str
     if (fromState?.systemNodeType === 'NewInstrument') {
       fromAlias = 'NewInstrument';
     } else if (fromState?.systemNodeType === 'TopicStart') {
-      fromAlias = `${instrument.id}.${topic.id}.Start`;
+      fromAlias = `${instrument.type}.${topic.id}.Start`;
     } else if (fromState?.systemNodeType === 'TopicEnd') {
-      fromAlias = `${instrument.id}.${topic.id}.End`;
+      fromAlias = `${instrument.type}.${topic.id}.End`;
     } else if (fromState?.systemNodeType === 'InstrumentEnd') {
       fromAlias = 'EndInstrument';
+    } else if (fromState) {
+      fromAlias = `${instrument.type}.${topic.id}.${getStateEnumId(fromState)}`;
     } else {
-      fromAlias = `${instrument.id}.${topic.id}.${transition.from}`;
+      fromAlias = `${instrument.type}.${topic.id}.${transition.from}`;
     }
     
     let toAlias: string;
     if (toState?.systemNodeType === 'NewInstrument') {
       toAlias = 'NewInstrument';
     } else if (toState?.systemNodeType === 'TopicStart') {
-      toAlias = `${instrument.id}.${topic.id}.Start`;
+      toAlias = `${instrument.type}.${topic.id}.Start`;
     } else if (toState?.systemNodeType === 'TopicEnd') {
-      toAlias = `${instrument.id}.${topic.id}.End`;
+      toAlias = `${instrument.type}.${topic.id}.End`;
     } else if (toState?.systemNodeType === 'InstrumentEnd') {
       toAlias = 'EndInstrument';
+    } else if (toState) {
+      toAlias = `${instrument.type}.${topic.id}.${getStateEnumId(toState)}`;
     } else {
-      toAlias = `${instrument.id}.${topic.id}.${transition.to}`;
+      toAlias = `${instrument.type}.${topic.id}.${transition.to}`;
     }
     
     const label = getTransitionLabel(transition, instrument, topic);
@@ -183,7 +199,7 @@ export function generateAggregatePuml(project: DiagramProject): string | null {
   const lines: string[] = [];
   lines.push('@startuml');
   lines.push('');
-  lines.push(`' Instrument Aggregate: ${instrument.label || instrument.id}`);
+  lines.push(`' Instrument Aggregate: ${instrument.label || instrument.type}`);
   lines.push('');
   lines.push(INLINE_STYLES);
   lines.push('');
@@ -193,12 +209,12 @@ export function generateAggregatePuml(project: DiagramProject): string | null {
   lines.push('');
 
   // Instrument container
-  lines.push(`state "${instrument.label || instrument.id}" as ${instrument.id} {`);
+  lines.push(`state "${instrument.label || instrument.type}" as ${instrument.type} {`);
   lines.push('');
 
   // All root topics
   rootTopics.forEach((rootTopic) => {
-    const rootId = `${instrument.id}.${rootTopic.topic.id}`;
+    const rootId = `${instrument.type}.${rootTopic.topic.id}`;
     lines.push(`  state "${rootTopic.topic.label || rootTopic.topic.id}" as ${rootId} {`);
     rootTopic.states.forEach((state) => {
       if (state.systemNodeType === 'NewInstrument') {
@@ -208,9 +224,10 @@ export function generateAggregatePuml(project: DiagramProject): string | null {
       } else if (state.systemNodeType === 'InstrumentEnd') {
         // Skip, declared at top level
       } else {
-        const label = state.label || state.id;
-        const stereotype = state.stereotype || state.id;
-        lines.push(`    state "${escapeLabel(label)}" as ${rootId}.${state.id} <<${stereotype}>>`);
+        const stateEnumId = getStateEnumId(state);
+        const label = state.label;
+        const stereotype = state.stereotype || stateEnumId;
+        lines.push(`    state "${escapeLabel(label)}" as ${rootId}.${stateEnumId} <<${stereotype}>>`);
       }
     });
     lines.push('');
@@ -223,12 +240,13 @@ export function generateAggregatePuml(project: DiagramProject): string | null {
       // Skip transitions from NewInstrument (handled externally)
       if (fromState?.systemNodeType === 'NewInstrument') return;
       
-      let fromAlias = `${rootId}.${transition.from}`;
+      const fromStateEnumId = fromState ? getStateEnumId(fromState) : transition.from;
+      let fromAlias = `${rootId}.${fromStateEnumId}`;
       let toAlias = toState?.systemNodeType === 'TopicEnd' 
         ? `${rootId}.End` 
         : toState?.systemNodeType === 'InstrumentEnd'
           ? 'EndInstrument'
-          : `${rootId}.${transition.to}`;
+          : `${rootId}.${toState ? getStateEnumId(toState) : transition.to}`;
       
       const label = getTransitionLabel(transition, instrument, rootTopic.topic);
       if (label) {
@@ -243,14 +261,14 @@ export function generateAggregatePuml(project: DiagramProject): string | null {
 
   // Only add flow control nodes if there are normal topics
   if (hasNormalTopics) {
-    lines.push(`  state "New Topic" as ${instrument.id}_NewTopicOut <<choice>>`);
-    lines.push(`  state "Topic Complete" as ${instrument.id}_NewTopicIn <<choice>>`);
+    lines.push(`  state "New Topic" as ${instrument.type}_NewTopicOut <<choice>>`);
+    lines.push(`  state "Topic Complete" as ${instrument.type}_NewTopicIn <<choice>>`);
     lines.push('');
   }
 
   // Normal topics
   normalTopics.forEach((topicData) => {
-    const topicAlias = `${instrument.id}.${topicData.topic.id}`;
+    const topicAlias = `${instrument.type}.${topicData.topic.id}`;
     lines.push(`  state "${topicData.topic.label || topicData.topic.id}" as ${topicAlias} {`);
     topicData.states.forEach((state) => {
       if (state.systemNodeType === 'TopicStart') {
@@ -260,9 +278,10 @@ export function generateAggregatePuml(project: DiagramProject): string | null {
       } else if (state.systemNodeType === 'InstrumentEnd') {
         // Skip, declared at top level
       } else {
-        const label = state.label || state.id;
-        const stereotype = state.stereotype || state.id;
-        lines.push(`    state "${escapeLabel(label)}" as ${topicAlias}.${state.id} <<${stereotype}>>`);
+        const stateEnumId = getStateEnumId(state);
+        const label = state.label;
+        const stereotype = state.stereotype || stateEnumId;
+        lines.push(`    state "${escapeLabel(label)}" as ${topicAlias}.${stateEnumId} <<${stereotype}>>`);
       }
     });
     lines.push('');
@@ -272,12 +291,12 @@ export function generateAggregatePuml(project: DiagramProject): string | null {
       
       let fromAlias = fromState?.systemNodeType === 'TopicStart' 
         ? `${topicAlias}.Start` 
-        : `${topicAlias}.${transition.from}`;
+        : `${topicAlias}.${fromState ? getStateEnumId(fromState) : transition.from}`;
       let toAlias = toState?.systemNodeType === 'TopicEnd' 
         ? `${topicAlias}.End` 
         : toState?.systemNodeType === 'InstrumentEnd'
           ? 'EndInstrument'
-          : `${topicAlias}.${transition.to}`;
+          : `${topicAlias}.${toState ? getStateEnumId(toState) : transition.to}`;
       
       const label = getTransitionLabel(transition, instrument, topicData.topic);
       if (label) {
@@ -290,15 +309,15 @@ export function generateAggregatePuml(project: DiagramProject): string | null {
     lines.push('');
 
     // Connect NewTopicOut to topic start
-    lines.push(`  ${instrument.id}_NewTopicOut --> ${topicAlias}.Start`);
+    lines.push(`  ${instrument.type}_NewTopicOut --> ${topicAlias}.Start`);
     // Connect topic end to NewTopicIn
-    lines.push(`  ${topicAlias}.End --> ${instrument.id}_NewTopicIn`);
+    lines.push(`  ${topicAlias}.End --> ${instrument.type}_NewTopicIn`);
     lines.push('');
   });
 
   // Loop back (only if normal topics exist)
   if (hasNormalTopics) {
-    lines.push(`  ${instrument.id}_NewTopicIn --> ${instrument.id}_NewTopicOut`);
+    lines.push(`  ${instrument.type}_NewTopicIn --> ${instrument.type}_NewTopicOut`);
     lines.push('');
   }
 
@@ -311,7 +330,7 @@ export function generateAggregatePuml(project: DiagramProject): string | null {
 
   // Connect NewInstrument to first state of each root topic
   rootTopics.forEach((rootTopic) => {
-    const rootId = `${instrument.id}.${rootTopic.topic.id}`;
+    const rootId = `${instrument.type}.${rootTopic.topic.id}`;
     // Find the first regular state that NewInstrument connects to
     const startTransition = rootTopic.transitions.find(t => {
       const fromState = rootTopic.states.find(s => s.id === t.from);
@@ -322,7 +341,7 @@ export function generateAggregatePuml(project: DiagramProject): string | null {
       const toState = rootTopic.states.find(s => s.id === startTransition.to);
       let toAlias = toState?.systemNodeType === 'TopicEnd'
         ? `${rootId}.End`
-        : `${rootId}.${startTransition.to}`;
+        : `${rootId}.${toState ? getStateEnumId(toState) : startTransition.to}`;
       
       const label = getTransitionLabel(startTransition, instrument, rootTopic.topic);
       if (label) {
@@ -337,8 +356,8 @@ export function generateAggregatePuml(project: DiagramProject): string | null {
   // Connect root topic ends to NewTopicOut (only if normal topics exist)
   if (hasNormalTopics) {
     rootTopics.forEach((rootTopic) => {
-      const rootId = `${instrument.id}.${rootTopic.topic.id}`;
-      lines.push(`${rootId}.End --> ${instrument.id}_NewTopicOut`);
+      const rootId = `${instrument.type}.${rootTopic.topic.id}`;
+      lines.push(`${rootId}.End --> ${instrument.type}_NewTopicOut`);
     });
     lines.push('');
   }

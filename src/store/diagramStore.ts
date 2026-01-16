@@ -48,8 +48,8 @@ interface DiagramState {
   selectTopic: (topicId: string) => void;
   setRootTopic: (topicId: string) => void;
   
-  // State actions
-  addState: (topicId: string, id: string, label?: string, position?: Position) => void;
+  // State actions - now takes label instead of id
+  addState: (topicId: string, label: string, position?: Position) => void;
   addInstrumentEnd: (topicId: string) => void;
   addTopicEnd: (topicId: string) => void;
   updateState: (topicId: string, stateId: string, updates: Partial<StateNode>) => void;
@@ -127,7 +127,7 @@ const createSystemNodes = (kind: TopicKind): StateNode[] => {
 const createNewProject = (instrument: Partial<Instrument> = {}): DiagramProject => {
   const projectId = uuidv4();
   const defaultInstrument: Instrument = {
-    id: instrument.id || 'new_instrument',
+    type: instrument.type || 'new_instrument',
     revision: instrument.revision || 'R1',
     label: instrument.label,
     description: instrument.description,
@@ -135,16 +135,10 @@ const createNewProject = (instrument: Partial<Instrument> = {}): DiagramProject 
   
   return {
     id: projectId,
-    name: defaultInstrument.label || defaultInstrument.id,
+    name: defaultInstrument.label || defaultInstrument.type,
     instrument: defaultInstrument,
-    topics: [
-      {
-        topic: { id: 'Main', label: 'Main Topic', kind: 'root' },
-        states: createSystemNodes('root'),
-        transitions: [],
-      },
-    ],
-    selectedTopicId: 'Main',
+    topics: [], // Start with empty topics
+    selectedTopicId: null,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
@@ -156,7 +150,7 @@ const createSampleProject = (): DiagramProject => {
     id: projectId,
     name: 'Payment Processing',
     instrument: { 
-      id: 'pacs_008', 
+      type: 'pacs_008', 
       revision: 'R1', 
       label: 'PACS 008 Payment',
       description: 'ISO 20022 payment message for credit transfers between financial institutions'
@@ -190,34 +184,28 @@ const createSampleProject = (): DiagramProject => {
             systemNodeType: 'InstrumentEnd',
           },
           {
-            id: 'Submitted',
+            id: uuidv4(),
             label: 'Submitted',
             stereotype: 'Submitted',
             position: { x: 250, y: 150 },
             isSystemNode: false,
           },
           {
-            id: 'Validated',
+            id: uuidv4(),
             label: 'Validated',
             stereotype: 'Validated',
             position: { x: 250, y: 250 },
             isSystemNode: false,
           },
           {
-            id: 'Rejected',
+            id: uuidv4(),
             label: 'Rejected',
             stereotype: 'Rejected',
             position: { x: 450, y: 200 },
             isSystemNode: false,
           },
         ],
-        transitions: [
-          { id: uuidv4(), from: 'NewInstrument', to: 'Submitted', kind: 'startInstrument', messageType: 'pacs_008', flowType: 'B2B', sourceHandleId: 'source-bottom', targetHandleId: 'target-top' },
-          { id: uuidv4(), from: 'Submitted', to: 'Validated', kind: 'normal', messageType: 'validate', flowType: 'B2B', sourceHandleId: 'source-bottom', targetHandleId: 'target-top' },
-          { id: uuidv4(), from: 'Submitted', to: 'Rejected', kind: 'normal', messageType: 'reject', flowType: 'B2B', sourceHandleId: 'source-right', targetHandleId: 'target-left' },
-          { id: uuidv4(), from: 'Validated', to: 'TopicEnd', kind: 'endTopic', messageType: '', flowType: 'B2B', sourceHandleId: 'source-bottom', targetHandleId: 'target-top' },
-          { id: uuidv4(), from: 'Rejected', to: 'InstrumentEnd', kind: 'endInstrument', messageType: '', flowType: 'B2B', sourceHandleId: 'source-bottom', targetHandleId: 'target-top' },
-        ],
+        transitions: [],
       },
     ],
     selectedTopicId: 'Release',
@@ -226,38 +214,34 @@ const createSampleProject = (): DiagramProject => {
   };
 };
 
-// Migration: Convert old single-project format to multi-project
-interface LegacyState {
-  project?: DiagramProject;
-  projects?: DiagramProject[];
-  activeProjectId?: string | null;
-}
-
-const migrateState = (persistedState: unknown): DiagramState | undefined => {
-  const state = persistedState as LegacyState;
+// Get IDs for transitions after creating sample states
+const initializeSampleProject = (): DiagramProject => {
+  const project = createSampleProject();
+  const topic = project.topics[0];
+  const states = topic.states;
   
-  // Already migrated
-  if (state.projects && Array.isArray(state.projects)) {
-    return undefined; // Let zustand use the persisted state as-is
+  // Find user states by label
+  const submitted = states.find(s => s.label === 'Submitted');
+  const validated = states.find(s => s.label === 'Validated');
+  const rejected = states.find(s => s.label === 'Rejected');
+  
+  if (submitted && validated && rejected) {
+    topic.transitions = [
+      { id: uuidv4(), from: 'NewInstrument', to: submitted.id, kind: 'startInstrument', messageType: 'pacs_008', flowType: 'B2B', sourceHandleId: 'source-bottom', targetHandleId: 'target-top' },
+      { id: uuidv4(), from: submitted.id, to: validated.id, kind: 'normal', messageType: 'validate', flowType: 'B2B', sourceHandleId: 'source-bottom', targetHandleId: 'target-top' },
+      { id: uuidv4(), from: submitted.id, to: rejected.id, kind: 'normal', messageType: 'reject', flowType: 'B2B', sourceHandleId: 'source-right', targetHandleId: 'target-left' },
+      { id: uuidv4(), from: validated.id, to: 'TopicEnd', kind: 'endTopic', messageType: '', flowType: 'B2B', sourceHandleId: 'source-bottom', targetHandleId: 'target-top' },
+      { id: uuidv4(), from: rejected.id, to: 'InstrumentEnd', kind: 'endInstrument', messageType: '', flowType: 'B2B', sourceHandleId: 'source-bottom', targetHandleId: 'target-top' },
+    ];
   }
   
-  // Old format: single project
-  if (state.project && !state.projects) {
-    const sampleProject = createSampleProject();
-    return {
-      projects: [state.project],
-      activeProjectId: state.project.id,
-      project: state.project, // Keep for backward compat
-    } as unknown as DiagramState;
-  }
-  
-  return undefined;
+  return project;
 };
 
 export const useDiagramStore = create<DiagramState>()(
   persist(
     immer((set, get) => {
-      const sampleProject = createSampleProject();
+      const sampleProject = initializeSampleProject();
       
       return {
         projects: [sampleProject],
@@ -311,8 +295,7 @@ export const useDiagramStore = create<DiagramState>()(
         },
         
         deleteProject: (projectId) => set((state) => {
-          if (state.projects.length <= 1) return; // Keep at least one project
-          
+          // Allow deleting all projects (gallery can be empty)
           state.projects = state.projects.filter(p => p.id !== projectId);
           if (state.activeProjectId === projectId) {
             state.activeProjectId = state.projects[0]?.id || null;
@@ -446,16 +429,17 @@ export const useDiagramStore = create<DiagramState>()(
           project.updatedAt = new Date().toISOString();
         }),
         
-        addState: (topicId, id, label, position) => set((state) => {
+        // Updated addState: takes label, generates UUID for id
+        addState: (topicId, label, position) => set((state) => {
           const project = state.projects.find(p => p.id === state.activeProjectId);
           if (!project) return;
           
           const topicData = project.topics.find(t => t.topic.id === topicId);
           if (topicData) {
             const newState: StateNode = {
-              id,
+              id: uuidv4(), // Auto-generate UUID
               label,
-              stereotype: id,
+              stereotype: label, // Default stereotype to label
               position: position ?? { x: 250, y: 200 },
               isSystemNode: false,
             };
@@ -676,7 +660,7 @@ export const useDiagramStore = create<DiagramState>()(
         },
         
         resetProject: () => {
-          const newProject = createSampleProject();
+          const newProject = initializeSampleProject();
           set({
             projects: [newProject],
             activeProjectId: newProject.id,
@@ -689,7 +673,6 @@ export const useDiagramStore = create<DiagramState>()(
     }),
     {
       name: 'diagram-project',
-      migrate: migrateState,
     }
   )
 );

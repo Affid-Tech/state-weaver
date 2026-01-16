@@ -74,7 +74,6 @@ export function InspectorPanel() {
     : DEFAULT_FLOW_TYPES;
 
   const [isAddStateOpen, setIsAddStateOpen] = useState(false);
-  const [newStateId, setNewStateId] = useState('');
   const [newStateLabel, setNewStateLabel] = useState('');
 
   const selectedTopicData = useMemo(() => {
@@ -123,9 +122,8 @@ export function InspectorPanel() {
   const warnings = validationIssues.filter(i => i.level === 'warning');
 
   const handleAddState = () => {
-    if (!project.selectedTopicId || !newStateId.trim()) return;
-    addState(project.selectedTopicId, newStateId.trim(), newStateLabel.trim() || undefined);
-    setNewStateId('');
+    if (!project.selectedTopicId || !newStateLabel.trim()) return;
+    addState(project.selectedTopicId, newStateLabel.trim());
     setNewStateLabel('');
     setIsAddStateOpen(false);
   };
@@ -196,19 +194,11 @@ export function InspectorPanel() {
                 </DialogHeader>
                 <div className="space-y-4 py-4">
                   <div className="space-y-2">
-                    <Label>State ID *</Label>
-                    <Input
-                      value={newStateId}
-                      onChange={(e) => setNewStateId(e.target.value)}
-                      placeholder="e.g., Submitted"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Label (optional)</Label>
+                    <Label>State Label *</Label>
                     <Input
                       value={newStateLabel}
                       onChange={(e) => setNewStateLabel(e.target.value)}
-                      placeholder="Display label"
+                      placeholder="e.g., Payment Submitted"
                     />
                   </div>
                 </div>
@@ -216,7 +206,7 @@ export function InspectorPanel() {
                   <Button variant="outline" onClick={() => setIsAddStateOpen(false)}>
                     Cancel
                   </Button>
-                  <Button onClick={handleAddState} disabled={!newStateId.trim()}>
+                  <Button onClick={handleAddState} disabled={!newStateLabel.trim()}>
                     Add State
                   </Button>
                 </DialogFooter>
