@@ -38,15 +38,6 @@ const HANDLE_SIDES = [
 ];
 
 
-function getTransitionKindLabel(kind: string): string {
-  switch (kind) {
-    case 'startInstrument': return 'Start Instrument';
-    case 'startTopic': return 'Start Topic';
-    case 'endTopic': return 'End Topic';
-    case 'endInstrument': return 'End Instrument';
-    default: return 'Normal';
-  }
-}
 
 export function InspectorPanel() {
   // Use selectors for reactive access
@@ -250,31 +241,18 @@ export function InspectorPanel() {
                       </Button>
                     )}
                   </div>
-                  
-                  <div className="space-y-2">
-                    <Label>ID</Label>
-                    <Input
-                      value={selectedState.id}
-                      disabled={selectedState.isSystemNode}
-                      onChange={(e) => {
-                        if (project.selectedTopicId) {
-                          updateState(project.selectedTopicId, selectedState.id, { id: e.target.value });
-                        }
-                      }}
-                    />
-                  </div>
 
                   <div className="space-y-2">
-                    <Label>Label</Label>
+                    <Label>Label *</Label>
                     <Input
                       value={selectedState.label || ''}
                       disabled={selectedState.isSystemNode}
                       onChange={(e) => {
-                        if (project.selectedTopicId) {
+                        if (project.selectedTopicId && e.target.value.trim()) {
                           updateState(project.selectedTopicId, selectedState.id, { label: e.target.value });
                         }
                       }}
-                      placeholder="Display label"
+                      placeholder="State label (required)"
                     />
                   </div>
 
@@ -300,7 +278,11 @@ export function InspectorPanel() {
                 </div>
               )}
 
-              {selectedTransition && (
+              {selectedTransition && (() => {
+                const fromState = selectedTopicData?.states.find(s => s.id === selectedTransition.from);
+                const toState = selectedTopicData?.states.find(s => s.id === selectedTransition.to);
+                
+                return (
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <h3 className="font-semibold">Transition Properties</h3>
@@ -312,14 +294,7 @@ export function InspectorPanel() {
                   <div className="space-y-2">
                     <Label>From → To</Label>
                     <p className="text-sm text-muted-foreground">
-                      {selectedTransition.from} → {selectedTransition.to}
-                    </p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Type (derived)</Label>
-                    <p className="text-sm px-3 py-2 bg-muted rounded-md">
-                      {getTransitionKindLabel(selectedTransition.kind)}
+                      {fromState?.label || 'Unknown'} → {toState?.label || 'Unknown'}
                     </p>
                   </div>
 
@@ -496,7 +471,7 @@ export function InspectorPanel() {
                     </div>
                   </div>
                 </div>
-              )}
+              ); })()}
 
               {!selectedState && !selectedTransition && (
                 <p className="text-sm text-muted-foreground text-center py-8">

@@ -235,6 +235,14 @@ export const useDiagramStore = create<DiagramState>()(
           const project = state.projects.find(p => p.id === state.activeProjectId);
           if (!project) return;
           
+          // Check for duplicate topic type within this instrument
+          const exists = project.topics.some(t => t.topic.id === id);
+          if (exists) {
+            // Topic with this type already exists - abort silently
+            // UI layer should handle user feedback
+            return;
+          }
+          
           const topicData: TopicData = {
             topic: { id, kind, label },
             states: createSystemNodes(kind),
