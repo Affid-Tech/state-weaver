@@ -31,6 +31,7 @@ export interface Instrument {
   id: string;
   revision: string; // Required - from revisions config or free string
   label?: string;
+  description?: string; // Optional description for gallery display
 }
 
 export interface Topic {

@@ -1,18 +1,18 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
-import { Copy, RefreshCw, AlertCircle, ChevronDown, ChevronUp, GripVertical } from 'lucide-react';
+import { Copy, RefreshCw, AlertCircle, ChevronDown, ChevronUp, GripVertical, Layers, LayoutGrid } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Toggle } from '@/components/ui/toggle';
 import { useDiagramStore } from '@/store/diagramStore';
 import { generateTopicPuml, generateAggregatePuml } from '@/lib/pumlGenerator';
 import { renderPumlToSvg } from '@/lib/krokiRenderer';
 import { cn } from '@/lib/utils';
-
 const MIN_CODE_WIDTH = 100;
 const MAX_CODE_WIDTH = 600;
 const DEFAULT_CODE_WIDTH = 320;
 
 export function PreviewPanel() {
-  const { project, viewMode } = useDiagramStore();
+  const { project, viewMode, setViewMode } = useDiagramStore();
   const [isExpanded, setIsExpanded] = useState(true);
   const [codeWidth, setCodeWidth] = useState(DEFAULT_CODE_WIDTH);
   const [isDragging, setIsDragging] = useState(false);
@@ -101,7 +101,32 @@ export function PreviewPanel() {
           {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
           Live Preview
         </button>
+        
         <div className="flex items-center gap-2">
+          {/* View Mode Toggle */}
+          <div className="flex items-center gap-1 mr-2">
+            <Toggle
+              pressed={viewMode === 'topic'}
+              onPressedChange={() => setViewMode('topic')}
+              aria-label="Topic view"
+              size="sm"
+              className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
+            >
+              <Layers className="h-3 w-3 mr-1" />
+              Topic
+            </Toggle>
+            <Toggle
+              pressed={viewMode === 'aggregate'}
+              onPressedChange={() => setViewMode('aggregate')}
+              aria-label="Aggregate view"
+              size="sm"
+              className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
+            >
+              <LayoutGrid className="h-3 w-3 mr-1" />
+              Aggregate
+            </Toggle>
+          </div>
+          
           <Button
             size="sm"
             variant="ghost"
