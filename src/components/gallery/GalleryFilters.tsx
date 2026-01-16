@@ -1,4 +1,4 @@
-import { Search, SortAsc } from 'lucide-react';
+import { Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -8,15 +8,11 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 
-export type SortOption = 'name' | 'modified' | 'created';
-
 interface GalleryFiltersProps {
   search: string;
   onSearchChange: (value: string) => void;
   revisionFilter: string;
   onRevisionFilterChange: (value: string) => void;
-  sortBy: SortOption;
-  onSortChange: (value: SortOption) => void;
   availableRevisions: string[];
 }
 
@@ -25,8 +21,6 @@ export function GalleryFilters({
   onSearchChange,
   revisionFilter,
   onRevisionFilterChange,
-  sortBy,
-  onSortChange,
   availableRevisions,
 }: GalleryFiltersProps) {
   return (
@@ -52,18 +46,6 @@ export function GalleryFilters({
               {rev}
             </SelectItem>
           ))}
-        </SelectContent>
-      </Select>
-
-      <Select value={sortBy} onValueChange={(v) => onSortChange(v as SortOption)}>
-        <SelectTrigger className="w-[160px]">
-          <SortAsc className="h-4 w-4 mr-2" />
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="modified">Last Modified</SelectItem>
-          <SelectItem value="created">Date Created</SelectItem>
-          <SelectItem value="name">Name</SelectItem>
         </SelectContent>
       </Select>
     </div>
