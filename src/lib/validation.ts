@@ -1,4 +1,5 @@
 import type { DiagramProject, TopicData, ValidationIssue, Transition } from '@/types/diagram';
+import { labelToEnumId } from '@/types/diagram';
 import type { FieldConfig } from '@/types/fieldConfig';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -118,36 +119,40 @@ function validateTopic(topicData: TopicData, instrumentType: string, fieldConfig
     }
   }
 
-  // Validate state IDs
+  // Validate state labels (what becomes PUML IDs)
   states.forEach((state) => {
     if (!state.isSystemNode) {
-      if (!state.id || state.id.trim() === '') {
+      if (!state.label || state.label.trim() === '') {
         issues.push({
           id: uuidv4(),
           level: 'error',
-          message: 'State ID is required',
+          message: 'State label is required',
           topicId: topic.id,
           elementId: state.id,
           elementType: 'state',
         });
-      } else if (!isValidEnumName(state.id)) {
-        issues.push({
-          id: uuidv4(),
-          level: 'error',
-          message: `State ID "${state.id}" must follow Java enum naming`,
-          topicId: topic.id,
-          elementId: state.id,
-          elementType: 'state',
-        });
-      } else if (RESERVED_NAMES.includes(state.id)) {
-        issues.push({
-          id: uuidv4(),
-          level: 'error',
-          message: `State ID "${state.id}" is a reserved name`,
-          topicId: topic.id,
-          elementId: state.id,
-          elementType: 'state',
-        });
+      } else {
+        // Convert label to check what the PUML ID will be
+        const pumlId = labelToEnumId(state.label);
+        if (!isValidEnumName(pumlId)) {
+          issues.push({
+            id: uuidv4(),
+            level: 'warning',
+            message: `State label "${state.label}" converts to invalid PUML ID "${pumlId}"`,
+            topicId: topic.id,
+            elementId: state.id,
+            elementType: 'state',
+          });
+        } else if (RESERVED_NAMES.includes(pumlId)) {
+          issues.push({
+            id: uuidv4(),
+            level: 'error',
+            message: `State label "${state.label}" converts to reserved name "${pumlId}"`,
+            topicId: topic.id,
+            elementId: state.id,
+            elementType: 'state',
+          });
+        }
       }
     }
   });
@@ -251,7 +256,7 @@ function validateTopic(topicData: TopicData, instrumentType: string, fieldConfig
         issues.push({
           id: uuidv4(),
           level: 'warning',
-          message: `State "${state.id}" is orphaned (no connections)`,
+          message: `State "${state.label}" is orphaned (no connections)`,
           topicId: topic.id,
           elementId: state.id,
           elementType: 'state',
@@ -276,7 +281,7 @@ function validateTopic(topicData: TopicData, instrumentType: string, fieldConfig
       issues.push({
         id: uuidv4(),
         level: 'warning',
-        message: `State "${state.id}" is unreachable from start`,
+        message: `State "${state.label}" is unreachable from start`,
         topicId: topic.id,
         elementId: state.id,
         elementType: 'state',

@@ -268,7 +268,7 @@ function DiagramCanvasInner() {
   );
 
   const handleCreateTransition = useCallback(
-    (messageType: string, flowType: FlowType) => {
+    (messageType: string, flowType: FlowType, revision?: string, instrument?: string, topic?: string) => {
       if (!project?.selectedTopicId || !pendingConnection) return;
       const transitionId = addTransition(
         project.selectedTopicId, 
@@ -277,7 +277,10 @@ function DiagramCanvasInner() {
         messageType, 
         flowType,
         pendingConnection.sourceHandle,
-        pendingConnection.targetHandle
+        pendingConnection.targetHandle,
+        revision,
+        instrument,
+        topic
       );
       setPendingConnection(null);
       // Select the new transition

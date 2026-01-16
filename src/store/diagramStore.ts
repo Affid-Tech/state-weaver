@@ -57,7 +57,7 @@ interface DiagramState {
   updateStatePosition: (topicId: string, stateId: string, position: Position) => void;
   
   // Transition actions
-  addTransition: (topicId: string, from: string, to: string, messageType: string, flowType: FlowType, sourceHandleId?: string, targetHandleId?: string) => string;
+  addTransition: (topicId: string, from: string, to: string, messageType: string, flowType: FlowType, sourceHandleId?: string, targetHandleId?: string, revision?: string, instrument?: string, topic?: string) => string;
   updateTransition: (topicId: string, transitionId: string, updates: Partial<Omit<Transition, 'kind'>>) => void;
   deleteTransition: (topicId: string, transitionId: string) => void;
   updateTransitionRouting: (topicId: string, transitionId: string, sourceHandleId?: string, targetHandleId?: string, curveOffset?: number) => void;
@@ -335,7 +335,7 @@ export const useDiagramStore = create<DiagramState>()(
             const newState: StateNode = {
               id: uuidv4(), // Auto-generate UUID
               label,
-              stereotype: label, // Default stereotype to label
+              stereotype: undefined, // No stereotype by default for custom states
               position: position ?? { x: 250, y: 200 },
               isSystemNode: false,
             };
@@ -433,7 +433,7 @@ export const useDiagramStore = create<DiagramState>()(
           }
         }),
         
-        addTransition: (topicId, from, to, messageType, flowType, sourceHandleId, targetHandleId) => {
+        addTransition: (topicId, from, to, messageType, flowType, sourceHandleId, targetHandleId, revision, instrument, topic) => {
           const transitionId = uuidv4();
           set((state) => {
             const project = state.projects.find(p => p.id === state.activeProjectId);
@@ -454,6 +454,9 @@ export const useDiagramStore = create<DiagramState>()(
                 flowType,
                 sourceHandleId,
                 targetHandleId,
+                revision,
+                instrument,
+                topic,
               });
               project.updatedAt = new Date().toISOString();
             }
