@@ -260,11 +260,10 @@ export function generateAggregatePuml(project: DiagramProject): string | null {
   });
 
   // Only add flow control nodes if there are normal topics
-  // Using L/R split for visual clarity (reducing arrow length)
   if (hasNormalTopics) {
-    lines.push(`  ' New Topic router nodes (duplicated for visual clarity)`);
-    lines.push(`  state "New Topic" as ${instrument.type}_NewTopic_L`);
-    lines.push(`  state "New Topic" as ${instrument.type}_NewTopic_R`);
+    lines.push(`  ' New Topic router nodes`);
+    lines.push(`  state "New Topic" as ${instrument.type}_NewTopic_Out`);
+    lines.push(`  state "New Topic" as ${instrument.type}_NewTopic_In`);
     lines.push('');
   }
 
@@ -313,22 +312,18 @@ export function generateAggregatePuml(project: DiagramProject): string | null {
 
   // Connect router nodes (only if normal topics exist)
   if (hasNormalTopics) {
-    // Connect right router to normal topic starts
+    // NewTopic_Out distributes to normal topic starts
     normalTopics.forEach((topicData) => {
       const topicAlias = `${instrument.type}.${topicData.topic.id}`;
-      lines.push(`  ${instrument.type}_NewTopic_R --> ${topicAlias}.Start`);
+      lines.push(`  ${instrument.type}_NewTopic_Out --> ${topicAlias}.Start`);
     });
     lines.push('');
     
-    // Connect normal topic ends to left router
+    // Normal topic ends flow into NewTopic_In (sink - no outgoing)
     normalTopics.forEach((topicData) => {
       const topicAlias = `${instrument.type}.${topicData.topic.id}`;
-      lines.push(`  ${topicAlias}.End --> ${instrument.type}_NewTopic_L`);
+      lines.push(`  ${topicAlias}.End --> ${instrument.type}_NewTopic_In`);
     });
-    lines.push('');
-    
-    // Connect left router to right router (visual bridge for looping)
-    lines.push(`  ${instrument.type}_NewTopic_L --> ${instrument.type}_NewTopic_R`);
     lines.push('');
   }
 
@@ -364,11 +359,11 @@ export function generateAggregatePuml(project: DiagramProject): string | null {
   });
   lines.push('');
 
-  // Connect root topic ends to left router (only if normal topics exist)
+  // Connect root topic ends to NewTopic_Out (only if normal topics exist)
   if (hasNormalTopics) {
     rootTopics.forEach((rootTopic) => {
       const rootId = `${instrument.type}.${rootTopic.topic.id}`;
-      lines.push(`${rootId}.End --> ${instrument.type}_NewTopic_L`);
+      lines.push(`${rootId}.End --> ${instrument.type}_NewTopic_Out`);
     });
     lines.push('');
   }
