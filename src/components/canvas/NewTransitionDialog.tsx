@@ -8,18 +8,12 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { Combobox } from '@/components/ui/combobox';
+import { useDiagramStore } from '@/store/diagramStore';
 import type { FlowType } from '@/types/diagram';
 
-const FLOW_TYPES: FlowType[] = ['B2B', 'B2C', 'C2B', 'C2C'];
+const DEFAULT_FLOW_TYPES: FlowType[] = ['B2B', 'B2C', 'C2B', 'C2C'];
 
 interface NewTransitionDialogProps {
   open: boolean;
@@ -36,8 +30,15 @@ export function NewTransitionDialog({
   target,
   onConfirm,
 }: NewTransitionDialogProps) {
+  const { fieldConfig } = useDiagramStore();
   const [messageType, setMessageType] = useState('');
   const [flowType, setFlowType] = useState<FlowType>('B2B');
+
+  // Derive options from fieldConfig with fallbacks
+  const messageTypeOptions = fieldConfig.messageTypes;
+  const flowTypeOptions = fieldConfig.flowTypes.length > 0 
+    ? fieldConfig.flowTypes 
+    : DEFAULT_FLOW_TYPES;
 
   const handleConfirm = () => {
     if (!messageType.trim()) return;
@@ -64,25 +65,22 @@ export function NewTransitionDialog({
         <div className="space-y-4 py-4">
           <div className="space-y-2">
             <Label>MessageType *</Label>
-            <Input
+            <Combobox
               value={messageType}
-              onChange={(e) => setMessageType(e.target.value)}
-              placeholder="e.g., Submit, Validate, Reject"
-              autoFocus
+              onChange={setMessageType}
+              options={messageTypeOptions}
+              placeholder="Select or enter message type..."
             />
           </div>
           <div className="space-y-2">
             <Label>FlowType *</Label>
-            <Select value={flowType} onValueChange={(v) => setFlowType(v as FlowType)}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {FLOW_TYPES.map((ft) => (
-                  <SelectItem key={ft} value={ft}>{ft}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Combobox
+              value={flowType}
+              onChange={(v) => v && setFlowType(v as FlowType)}
+              options={flowTypeOptions}
+              placeholder="Select flow type..."
+              allowClear={false}
+            />
           </div>
         </div>
         <DialogFooter>
