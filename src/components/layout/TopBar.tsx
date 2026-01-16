@@ -1,13 +1,12 @@
 import { useState, useRef, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   FileText,
   Download,
   Upload,
-  PlusCircle,
   FileCode,
-  Layers,
-  LayoutGrid,
   Settings,
+  ArrowLeft,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,7 +17,6 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
-import { Toggle } from '@/components/ui/toggle';
 import { useDiagramStore } from '@/store/diagramStore';
 import { generateTopicPuml, generateAggregatePuml } from '@/lib/pumlGenerator';
 import { validateProject, hasBlockingErrors } from '@/lib/validation';
@@ -26,14 +24,13 @@ import { toast } from 'sonner';
 import { FieldConfigDialog } from '@/components/settings/FieldConfigDialog';
 
 export function TopBar() {
+  const navigate = useNavigate();
   const {
     project,
     viewMode,
-    setViewMode,
     updateProjectName,
     exportProject,
     importProject,
-    resetProject,
   } = useDiagramStore();
 
   const [isEditing, setIsEditing] = useState(false);
@@ -113,16 +110,20 @@ export function TopBar() {
     e.target.value = '';
   };
 
-  const handleNewProject = () => {
-    if (confirm('Create a new project? Unsaved changes will be lost.')) {
-      resetProject();
-      toast.success('New project created');
-    }
+  const handleBackToGallery = () => {
+    navigate('/');
   };
 
   return (
     <header className="h-14 bg-card border-b border-border flex items-center justify-between px-4">
       <div className="flex items-center gap-4">
+        <Button variant="ghost" size="sm" onClick={handleBackToGallery}>
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Gallery
+        </Button>
+        
+        <div className="h-6 w-px bg-border" />
+        
         <div className="flex items-center gap-2">
           <FileText className="h-5 w-5 text-primary" />
           {isEditing ? (
@@ -148,11 +149,6 @@ export function TopBar() {
         </div>
 
         <div className="flex items-center gap-1 ml-4">
-          <Button variant="ghost" size="sm" onClick={handleNewProject}>
-            <PlusCircle className="h-4 w-4 mr-2" />
-            New
-          </Button>
-
           <input
             ref={fileInputRef}
             type="file"
@@ -188,33 +184,11 @@ export function TopBar() {
 
           <Button variant="ghost" size="sm" onClick={() => setIsSettingsOpen(true)}>
             <Settings className="h-4 w-4 mr-2" />
-            Settings
+            Field Config
           </Button>
         </div>
 
         <FieldConfigDialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen} />
-      </div>
-
-      <div className="flex items-center gap-2">
-        <span className="text-sm text-muted-foreground mr-2">View:</span>
-        <Toggle
-          pressed={viewMode === 'topic'}
-          onPressedChange={() => setViewMode('topic')}
-          aria-label="Topic view"
-          className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
-        >
-          <Layers className="h-4 w-4 mr-2" />
-          Topic
-        </Toggle>
-        <Toggle
-          pressed={viewMode === 'aggregate'}
-          onPressedChange={() => setViewMode('aggregate')}
-          aria-label="Aggregate view"
-          className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
-        >
-          <LayoutGrid className="h-4 w-4 mr-2" />
-          Aggregate
-        </Toggle>
       </div>
     </header>
   );

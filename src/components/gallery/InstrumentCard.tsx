@@ -1,0 +1,93 @@
+import { formatDistanceToNow } from 'date-fns';
+import { MoreVertical, Copy, Trash2, Edit2, Layers } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import type { DiagramProject } from '@/types/diagram';
+
+interface InstrumentCardProps {
+  project: DiagramProject;
+  onEdit: (projectId: string) => void;
+  onDuplicate: (projectId: string) => void;
+  onDelete: (projectId: string) => void;
+}
+
+export function InstrumentCard({ project, onEdit, onDuplicate, onDelete }: InstrumentCardProps) {
+  const topicCount = project.topics.length;
+  const updatedAgo = formatDistanceToNow(new Date(project.updatedAt), { addSuffix: true });
+  
+  return (
+    <Card 
+      className="group cursor-pointer transition-all hover:shadow-lg hover:border-primary/50"
+      onClick={() => onEdit(project.id)}
+    >
+      <CardHeader className="pb-3">
+        <div className="flex items-start justify-between">
+          <div className="space-y-1 flex-1 min-w-0">
+            <CardTitle className="text-lg truncate">{project.instrument.id}</CardTitle>
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary" className="text-xs">
+                {project.instrument.revision}
+              </Badge>
+              {project.instrument.label && (
+                <span className="text-sm text-muted-foreground truncate">
+                  {project.instrument.label}
+                </span>
+              )}
+            </div>
+          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+              >
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onEdit(project.id); }}>
+                <Edit2 className="h-4 w-4 mr-2" />
+                Edit
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onDuplicate(project.id); }}>
+                <Copy className="h-4 w-4 mr-2" />
+                Duplicate
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem 
+                className="text-destructive focus:text-destructive"
+                onClick={(e) => { e.stopPropagation(); onDelete(project.id); }}
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </CardHeader>
+      <CardContent className="pt-0">
+        {project.instrument.description && (
+          <CardDescription className="line-clamp-2 mb-4">
+            {project.instrument.description}
+          </CardDescription>
+        )}
+        <div className="flex items-center justify-between text-xs text-muted-foreground">
+          <div className="flex items-center gap-1">
+            <Layers className="h-3 w-3" />
+            <span>{topicCount} topic{topicCount !== 1 ? 's' : ''}</span>
+          </div>
+          <span>Modified {updatedAgo}</span>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}

@@ -1,16 +1,35 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { TopBar } from '@/components/layout/TopBar';
 import { StructureSidebar } from '@/components/sidebar/StructureSidebar';
 import { InspectorPanel } from '@/components/sidebar/InspectorPanel';
 import { DiagramCanvas } from '@/components/canvas/DiagramCanvas';
 import { PreviewPanel } from '@/components/preview/PreviewPanel';
+import { useDiagramStore } from '@/store/diagramStore';
 
 const MIN_CANVAS_HEIGHT = 200;
 const MIN_PREVIEW_HEIGHT = 100;
 
-const Index = () => {
+export default function Editor() {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const { projects, selectProject, activeProjectId } = useDiagramStore();
+  
   const [canvasHeight, setCanvasHeight] = useState<number | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+
+  // Select the project based on URL param
+  useEffect(() => {
+    if (id && id !== activeProjectId) {
+      const exists = projects.some(p => p.id === id);
+      if (exists) {
+        selectProject(id);
+      } else {
+        // Project not found, redirect to gallery
+        navigate('/');
+      }
+    }
+  }, [id, activeProjectId, projects, selectProject, navigate]);
 
   const handleDragStart = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -60,6 +79,7 @@ const Index = () => {
             className={`h-2 cursor-row-resize flex-shrink-0 flex items-center justify-center transition-colors ${
               isDragging ? 'bg-primary/30' : 'bg-border hover:bg-primary/20'
             }`}
+            title="Drag to resize"
           >
             <div className="w-12 h-1 rounded-full bg-muted-foreground/30" />
           </div>
@@ -72,6 +92,4 @@ const Index = () => {
       </div>
     </div>
   );
-};
-
-export default Index;
+}
