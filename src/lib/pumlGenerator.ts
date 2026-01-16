@@ -195,6 +195,14 @@ export function generateAggregatePuml(project: DiagramProject): string | null {
   const { instrument } = project;
   const normalTopics = project.topics.filter(t => t.topic.kind === 'normal');
   const hasNormalTopics = normalTopics.length > 0;
+  
+  // Check if any topic has a transition to InstrumentEnd
+  const hasInstrumentEndTransitions = project.topics.some(topicData => 
+    topicData.transitions.some(t => {
+      const toState = topicData.states.find(s => s.id === t.to);
+      return toState?.systemNodeType === 'InstrumentEnd';
+    })
+  );
 
   const lines: string[] = [];
   lines.push('@startuml');
@@ -330,9 +338,11 @@ export function generateAggregatePuml(project: DiagramProject): string | null {
   lines.push('}');
   lines.push('');
 
-  // InstrumentEnd OUTSIDE the instrument container
-  lines.push(`state EndInstrument <<end>>`);
-  lines.push('');
+  // InstrumentEnd OUTSIDE the instrument container - only if there are transitions to it
+  if (hasInstrumentEndTransitions) {
+    lines.push(`state EndInstrument <<end>>`);
+    lines.push('');
+  }
 
   // Connect NewInstrument to first state of each root topic
   rootTopics.forEach((rootTopic) => {
