@@ -12,6 +12,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { useDiagramStore } from '@/store/diagramStore';
+import { toast } from 'sonner';
 
 interface NewInstrumentDialogProps {
   open: boolean;
@@ -20,7 +21,7 @@ interface NewInstrumentDialogProps {
 }
 
 export function NewInstrumentDialog({ open, onOpenChange, onCreated }: NewInstrumentDialogProps) {
-  const { fieldConfig, createProject } = useDiagramStore();
+  const { fieldConfig, createProject, projects } = useDiagramStore();
   
   const [instrumentType, setInstrumentType] = useState('');
   const [revision, setRevision] = useState('');
@@ -29,8 +30,19 @@ export function NewInstrumentDialog({ open, onOpenChange, onCreated }: NewInstru
   const instrumentTypeOptions = fieldConfig.instrumentTypes;
   const revisionOptions = fieldConfig.revisions;
 
+  // Check for duplicate type+revision combination
+  const isDuplicate = projects.some(
+    p => p.instrument.type === instrumentType.trim() && 
+         p.instrument.revision === revision.trim()
+  );
+
   const handleCreate = () => {
     if (!instrumentType.trim() || !revision.trim()) return;
+    
+    if (isDuplicate) {
+      toast.error(`An instrument with type "${instrumentType}" and revision "${revision}" already exists.`);
+      return;
+    }
     
     const projectId = createProject({
       type: instrumentType.trim(),
@@ -53,7 +65,7 @@ export function NewInstrumentDialog({ open, onOpenChange, onCreated }: NewInstru
     onOpenChange(false);
   };
 
-  const isValid = instrumentType.trim() && revision.trim();
+  const isValid = instrumentType.trim() && revision.trim() && !isDuplicate;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

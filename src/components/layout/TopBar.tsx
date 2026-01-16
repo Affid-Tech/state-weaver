@@ -1,4 +1,4 @@
-import { useRef, useMemo } from 'react';
+import { useRef, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   FileText,
@@ -7,6 +7,7 @@ import {
   FileCode,
   Settings,
   ArrowLeft,
+  Archive,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -19,9 +20,9 @@ import {
 import { useDiagramStore } from '@/store/diagramStore';
 import { generateTopicPuml, generateAggregatePuml } from '@/lib/pumlGenerator';
 import { validateProject, hasBlockingErrors } from '@/lib/validation';
+import { exportProjectAsZip } from '@/lib/exportUtils';
 import { toast } from 'sonner';
 import { FieldConfigDialog } from '@/components/settings/FieldConfigDialog';
-import { useState } from 'react';
 
 export function TopBar() {
   const navigate = useNavigate();
@@ -93,6 +94,26 @@ export function TopBar() {
     toast.success('PlantUML exported');
   };
 
+  const handleExportZip = async () => {
+    if (hasErrors) {
+      toast.error('Fix validation errors before exporting');
+      return;
+    }
+    
+    try {
+      const blob = await exportProjectAsZip(project);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${project.instrument.type}_${project.instrument.revision}.zip`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success('Project exported as ZIP');
+    } catch (error) {
+      toast.error('Failed to create ZIP file');
+    }
+  };
+
   const handleImportJson = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -156,6 +177,11 @@ export function TopBar() {
               <DropdownMenuItem onClick={handleExportPuml} disabled={hasErrors}>
                 <FileCode className="h-4 w-4 mr-2" />
                 Export PlantUML (.puml)
+                {hasErrors && <span className="ml-2 text-destructive text-xs">(fix errors)</span>}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleExportZip} disabled={hasErrors}>
+                <Archive className="h-4 w-4 mr-2" />
+                Export as ZIP (.zip)
                 {hasErrors && <span className="ml-2 text-destructive text-xs">(fix errors)</span>}
               </DropdownMenuItem>
               <DropdownMenuSeparator />

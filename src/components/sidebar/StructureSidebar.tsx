@@ -96,14 +96,39 @@ export function StructureSidebar() {
   const handleSaveEdit = () => {
     if (!editingTopic || !editTopicId.trim()) return;
     
+    // Check for duplicate topic type (excluding current topic being edited)
+    const trimmedId = editTopicId.trim();
+    const isDuplicate = project.topics.some(
+      t => t.topic.id === trimmedId && t.topic.id !== editingTopic.topic.id
+    );
+    
+    if (isDuplicate) {
+      toast.error(`Topic type "${trimmedId}" already exists in this instrument.`);
+      return;
+    }
+    
     updateTopic(editingTopic.topic.id, {
-      id: editTopicId.trim(),
+      id: trimmedId,
       label: editTopicLabel.trim() || undefined,
     });
     
     setIsEditDialogOpen(false);
     setEditingTopic(null);
   };
+
+  // Compute available topic types for create dialog (exclude already used)
+  const usedTopicTypesForCreate = project.topics.map(t => t.topic.id);
+  const availableTopicTypesForCreate = fieldConfig.topicTypes.filter(
+    type => !usedTopicTypesForCreate.includes(type)
+  );
+
+  // Compute available topic types for edit dialog (exclude used except current)
+  const usedTopicTypesForEdit = project.topics
+    .filter(t => t.topic.id !== editingTopic?.topic.id)
+    .map(t => t.topic.id);
+  const availableTopicTypesForEdit = fieldConfig.topicTypes.filter(
+    type => !usedTopicTypesForEdit.includes(type)
+  );
 
   return (
     <aside className="w-64 bg-sidebar border-r border-sidebar-border flex flex-col">
@@ -132,7 +157,7 @@ export function StructureSidebar() {
                   <Combobox
                     value={newTopicId}
                     onChange={setNewTopicId}
-                    options={fieldConfig.topicTypes}
+                    options={availableTopicTypesForCreate}
                     placeholder="e.g., Release"
                   />
                 </div>
@@ -243,7 +268,7 @@ export function StructureSidebar() {
               <Combobox
                 value={editTopicId}
                 onChange={setEditTopicId}
-                options={fieldConfig.topicTypes}
+                options={availableTopicTypesForEdit}
                 placeholder="e.g., Release"
               />
             </div>

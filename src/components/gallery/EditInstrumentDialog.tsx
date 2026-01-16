@@ -13,6 +13,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { useDiagramStore } from '@/store/diagramStore';
+import { toast } from 'sonner';
 import type { DiagramProject } from '@/types/diagram';
 
 interface EditInstrumentDialogProps {
@@ -22,7 +23,7 @@ interface EditInstrumentDialogProps {
 }
 
 export function EditInstrumentDialog({ open, onOpenChange, project }: EditInstrumentDialogProps) {
-  const { fieldConfig, updateInstrument, selectProject, activeProjectId } = useDiagramStore();
+  const { fieldConfig, updateInstrument, selectProject, activeProjectId, projects } = useDiagramStore();
   
   const [instrumentType, setInstrumentType] = useState('');
   const [revision, setRevision] = useState('');
@@ -42,8 +43,20 @@ export function EditInstrumentDialog({ open, onOpenChange, project }: EditInstru
     }
   }, [project]);
 
+  // Check for duplicate type+revision combination (excluding current project)
+  const isDuplicate = projects.some(
+    p => p.id !== project?.id &&
+         p.instrument.type === instrumentType.trim() && 
+         p.instrument.revision === revision.trim()
+  );
+
   const handleSave = () => {
     if (!project || !instrumentType.trim() || !revision.trim()) return;
+    
+    if (isDuplicate) {
+      toast.error(`An instrument with type "${instrumentType}" and revision "${revision}" already exists.`);
+      return;
+    }
     
     // Temporarily select this project to update it
     const previousActiveId = activeProjectId;
@@ -68,7 +81,7 @@ export function EditInstrumentDialog({ open, onOpenChange, project }: EditInstru
     onOpenChange(false);
   };
 
-  const isValid = instrumentType.trim() && revision.trim();
+  const isValid = instrumentType.trim() && revision.trim() && !isDuplicate;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
