@@ -17,25 +17,25 @@ export function isValidEnumName(value: string): boolean {
 export function validateProject(project: DiagramProject, fieldConfig?: FieldConfig): ValidationIssue[] {
   const issues: ValidationIssue[] = [];
 
-  // Validate instrument ID
-  if (!project.instrument.id || project.instrument.id.trim() === '') {
+  // Validate instrument type
+  if (!project.instrument.type || project.instrument.type.trim() === '') {
     issues.push({
       id: uuidv4(),
       level: 'error',
-      message: 'Instrument ID is required',
+      message: 'Instrument type is required',
     });
-  } else if (!isValidEnumName(project.instrument.id)) {
+  } else if (!isValidEnumName(project.instrument.type)) {
     issues.push({
       id: uuidv4(),
       level: 'error',
-      message: `Instrument ID "${project.instrument.id}" must follow Java enum naming (letters, numbers, underscores only)`,
+      message: `Instrument type "${project.instrument.type}" must follow Java enum naming (letters, numbers, underscores only)`,
     });
   } else if (fieldConfig?.instrumentTypes && fieldConfig.instrumentTypes.length > 0) {
-    if (!fieldConfig.instrumentTypes.includes(project.instrument.id)) {
+    if (!fieldConfig.instrumentTypes.includes(project.instrument.type)) {
       issues.push({
         id: uuidv4(),
         level: 'warning',
-        message: `Instrument ID "${project.instrument.id}" is not in configured instrument types`,
+        message: `Instrument type "${project.instrument.type}" is not in configured instrument types`,
       });
     }
   }
@@ -65,7 +65,7 @@ export function validateProject(project: DiagramProject, fieldConfig?: FieldConf
 
   // Validate each topic
   project.topics.forEach((topicData) => {
-    issues.push(...validateTopic(topicData, project.instrument.id, fieldConfig));
+    issues.push(...validateTopic(topicData, project.instrument.type, fieldConfig));
   });
 
   // Check for exactly one root topic (warning if none)
@@ -81,7 +81,7 @@ export function validateProject(project: DiagramProject, fieldConfig?: FieldConf
   return issues;
 }
 
-function validateTopic(topicData: TopicData, instrumentId: string, fieldConfig?: FieldConfig): ValidationIssue[] {
+function validateTopic(topicData: TopicData, instrumentType: string, fieldConfig?: FieldConfig): ValidationIssue[] {
   const issues: ValidationIssue[] = [];
   const { topic, states, transitions } = topicData;
 

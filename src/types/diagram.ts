@@ -28,10 +28,21 @@ export interface Position {
 }
 
 export interface Instrument {
-  id: string;
-  revision: string; // Required - from revisions config or free string
-  label?: string;
-  description?: string; // Optional description for gallery display
+  type: string;          // User-facing instrument type (e.g., "pacs_008")
+  revision: string;      // Required - from revisions config or free string
+  label?: string;        // Optional human-friendly name
+  description?: string;  // Optional description for gallery display
+}
+
+// Convert a label to Java enum-style identifier for PUML export
+export function labelToEnumId(label: string): string {
+  if (!label || !label.trim()) return 'STATE';
+  return label
+    .trim()
+    .replace(/[^a-zA-Z0-9_\s]/g, '')  // Remove special chars
+    .replace(/\s+/g, '_')              // Spaces to underscores
+    .replace(/^(\d)/, '_$1')           // Prefix if starts with digit
+    .toUpperCase() || 'STATE';
 }
 
 export interface Topic {
@@ -41,8 +52,8 @@ export interface Topic {
 }
 
 export interface StateNode {
-  id: string;
-  label?: string;
+  id: string;              // Internal UUID (auto-generated, hidden from user)
+  label: string;           // User-facing label (required)
   stereotype?: string;
   position: Position;
   isSystemNode: boolean;
