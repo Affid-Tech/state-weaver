@@ -17,18 +17,29 @@ export default function Editor() {
   
   const [canvasHeight, setCanvasHeight] = useState<number | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [isReady, setIsReady] = useState(false);
 
   // Select the project based on URL param
   useEffect(() => {
-    if (id && id !== activeProjectId) {
-      const exists = projects.some(p => p.id === id);
-      if (exists) {
-        selectProject(id);
-      } else {
-        // Project not found, redirect to gallery
-        navigate('/');
-      }
+    if (!id) {
+      navigate('/');
+      return;
     }
+
+    const exists = projects.some(p => p.id === id);
+    if (!exists) {
+      // Project not found, redirect to gallery
+      navigate('/');
+      return;
+    }
+
+    // Select project if not already selected
+    if (id !== activeProjectId) {
+      selectProject(id);
+    }
+    
+    // Mark as ready once project is selected
+    setIsReady(true);
   }, [id, activeProjectId, projects, selectProject, navigate]);
 
   const handleDragStart = useCallback((e: React.MouseEvent) => {
@@ -59,6 +70,15 @@ export default function Editor() {
     document.addEventListener('mousemove', handleMouseMove);
     document.addEventListener('mouseup', handleMouseUp);
   }, [canvasHeight]);
+
+  // Show loading state until project is selected
+  if (!isReady || !id || activeProjectId !== id) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-background">
+        <p className="text-muted-foreground">Loading...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="h-screen flex flex-col overflow-hidden">
