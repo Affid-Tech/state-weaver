@@ -260,9 +260,11 @@ export function generateAggregatePuml(project: DiagramProject): string | null {
   });
 
   // Only add flow control nodes if there are normal topics
+  // Using L/R split for visual clarity (reducing arrow length)
   if (hasNormalTopics) {
-    lines.push(`  state "New Topic" as ${instrument.type}_NewTopicOut <<choice>>`);
-    lines.push(`  state "Topic Complete" as ${instrument.type}_NewTopicIn <<choice>>`);
+    lines.push(`  ' New Topic router nodes (duplicated for visual clarity)`);
+    lines.push(`  state "New Topic" as ${instrument.type}_NewTopic_L`);
+    lines.push(`  state "New Topic" as ${instrument.type}_NewTopic_R`);
     lines.push('');
   }
 
@@ -307,17 +309,26 @@ export function generateAggregatePuml(project: DiagramProject): string | null {
     });
     lines.push('  }');
     lines.push('');
-
-    // Connect NewTopicOut to topic start
-    lines.push(`  ${instrument.type}_NewTopicOut --> ${topicAlias}.Start`);
-    // Connect topic end to NewTopicIn
-    lines.push(`  ${topicAlias}.End --> ${instrument.type}_NewTopicIn`);
-    lines.push('');
   });
 
-  // Loop back (only if normal topics exist)
+  // Connect router nodes (only if normal topics exist)
   if (hasNormalTopics) {
-    lines.push(`  ${instrument.type}_NewTopicIn --> ${instrument.type}_NewTopicOut`);
+    // Connect right router to normal topic starts
+    normalTopics.forEach((topicData) => {
+      const topicAlias = `${instrument.type}.${topicData.topic.id}`;
+      lines.push(`  ${instrument.type}_NewTopic_R --> ${topicAlias}.Start`);
+    });
+    lines.push('');
+    
+    // Connect normal topic ends to left router
+    normalTopics.forEach((topicData) => {
+      const topicAlias = `${instrument.type}.${topicData.topic.id}`;
+      lines.push(`  ${topicAlias}.End --> ${instrument.type}_NewTopic_L`);
+    });
+    lines.push('');
+    
+    // Connect left router to right router (visual bridge for looping)
+    lines.push(`  ${instrument.type}_NewTopic_L --> ${instrument.type}_NewTopic_R`);
     lines.push('');
   }
 
@@ -353,11 +364,11 @@ export function generateAggregatePuml(project: DiagramProject): string | null {
   });
   lines.push('');
 
-  // Connect root topic ends to NewTopicOut (only if normal topics exist)
+  // Connect root topic ends to left router (only if normal topics exist)
   if (hasNormalTopics) {
     rootTopics.forEach((rootTopic) => {
       const rootId = `${instrument.type}.${rootTopic.topic.id}`;
-      lines.push(`${rootId}.End --> ${instrument.type}_NewTopicOut`);
+      lines.push(`${rootId}.End --> ${instrument.type}_NewTopic_L`);
     });
     lines.push('');
   }

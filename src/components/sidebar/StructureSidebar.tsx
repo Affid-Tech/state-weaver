@@ -30,6 +30,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Combobox } from '@/components/ui/combobox';
 import { useDiagramStore } from '@/store/diagramStore';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 import type { TopicKind, TopicData } from '@/types/diagram';
 
 export function StructureSidebar() {
@@ -64,6 +65,14 @@ export function StructureSidebar() {
 
   const handleCreateTopic = () => {
     if (!newTopicId.trim()) return;
+    
+    // Check for duplicate topic type
+    const exists = project.topics.some(t => t.topic.id === newTopicId.trim());
+    if (exists) {
+      toast.error(`Topic type "${newTopicId.trim()}" already exists in this instrument.`);
+      return;
+    }
+    
     createTopic(newTopicId.trim(), newTopicKind, newTopicLabel.trim() || undefined);
     setNewTopicId('');
     setNewTopicLabel('');
@@ -119,7 +128,7 @@ export function StructureSidebar() {
               </DialogHeader>
               <div className="space-y-4 py-4">
                 <div className="space-y-2">
-                  <Label>Topic ID *</Label>
+                  <Label>Topic Type *</Label>
                   <Combobox
                     value={newTopicId}
                     onChange={setNewTopicId}
@@ -230,7 +239,7 @@ export function StructureSidebar() {
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label>Topic ID *</Label>
+              <Label>Topic Type *</Label>
               <Combobox
                 value={editTopicId}
                 onChange={setEditTopicId}
