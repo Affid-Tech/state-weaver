@@ -6,16 +6,21 @@ import { useDiagramStore } from '@/store/diagramStore';
 import { InstrumentCard } from '@/components/gallery/InstrumentCard';
 import { GalleryFilters, SortOption } from '@/components/gallery/GalleryFilters';
 import { FieldConfigDialog } from '@/components/settings/FieldConfigDialog';
+import { NewInstrumentDialog } from '@/components/gallery/NewInstrumentDialog';
+import { EditInstrumentDialog } from '@/components/gallery/EditInstrumentDialog';
 import { toast } from 'sonner';
+import type { DiagramProject } from '@/types/diagram';
 
 export default function Gallery() {
   const navigate = useNavigate();
-  const { projects, createProject, duplicateProject, deleteProject, selectProject } = useDiagramStore();
+  const { projects, duplicateProject, deleteProject, selectProject } = useDiagramStore();
   
   const [search, setSearch] = useState('');
   const [revisionFilter, setRevisionFilter] = useState('__all__');
   const [sortBy, setSortBy] = useState<SortOption>('modified');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isNewDialogOpen, setIsNewDialogOpen] = useState(false);
+  const [editingProject, setEditingProject] = useState<DiagramProject | null>(null);
 
   // Get unique revisions for filter dropdown
   const availableRevisions = useMemo(() => {
@@ -31,7 +36,7 @@ export default function Gallery() {
     if (search) {
       const lowerSearch = search.toLowerCase();
       result = result.filter(p => 
-        p.instrument.id.toLowerCase().includes(lowerSearch) ||
+        p.instrument.type.toLowerCase().includes(lowerSearch) ||
         p.instrument.label?.toLowerCase().includes(lowerSearch) ||
         p.instrument.description?.toLowerCase().includes(lowerSearch) ||
         p.name.toLowerCase().includes(lowerSearch)
@@ -47,7 +52,7 @@ export default function Gallery() {
     result.sort((a, b) => {
       switch (sortBy) {
         case 'name':
-          return a.instrument.id.localeCompare(b.instrument.id);
+          return a.instrument.type.localeCompare(b.instrument.type);
         case 'created':
           return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
         case 'modified':
@@ -72,20 +77,22 @@ export default function Gallery() {
   };
 
   const handleDelete = (projectId: string) => {
-    if (projects.length <= 1) {
-      toast.error('Cannot delete the last instrument');
-      return;
-    }
-    
     if (confirm('Are you sure you want to delete this instrument?')) {
       deleteProject(projectId);
       toast.success('Instrument deleted');
     }
   };
 
-  const handleNewInstrument = () => {
-    const newId = createProject({ id: 'new_instrument', revision: 'R1' });
-    navigate(`/editor/${newId}`);
+  const handleEditDetails = (projectId: string) => {
+    const project = projects.find(p => p.id === projectId);
+    if (project) {
+      setEditingProject(project);
+    }
+  };
+
+  const handleNewInstrumentCreated = (projectId: string) => {
+    setIsNewDialogOpen(false);
+    navigate(`/editor/${projectId}`);
   };
 
   return (
@@ -100,7 +107,7 @@ export default function Gallery() {
                 <Settings className="h-4 w-4 mr-2" />
                 Field Config
               </Button>
-              <Button onClick={handleNewInstrument}>
+              <Button onClick={() => setIsNewDialogOpen(true)}>
                 <PlusCircle className="h-4 w-4 mr-2" />
                 New Instrument
               </Button>
@@ -128,7 +135,7 @@ export default function Gallery() {
                 : 'No instruments match your filters.'}
             </div>
             {projects.length === 0 && (
-              <Button onClick={handleNewInstrument}>
+              <Button onClick={() => setIsNewDialogOpen(true)}>
                 <PlusCircle className="h-4 w-4 mr-2" />
                 Create Instrument
               </Button>
@@ -141,6 +148,7 @@ export default function Gallery() {
                 key={project.id}
                 project={project}
                 onEdit={handleEdit}
+                onEditDetails={handleEditDetails}
                 onDuplicate={handleDuplicate}
                 onDelete={handleDelete}
               />
@@ -150,6 +158,16 @@ export default function Gallery() {
       </main>
 
       <FieldConfigDialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen} />
+      <NewInstrumentDialog 
+        open={isNewDialogOpen} 
+        onOpenChange={setIsNewDialogOpen}
+        onCreated={handleNewInstrumentCreated}
+      />
+      <EditInstrumentDialog
+        project={editingProject}
+        open={!!editingProject}
+        onOpenChange={(open) => !open && setEditingProject(null)}
+      />
     </div>
   );
 }
