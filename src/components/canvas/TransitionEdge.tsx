@@ -47,7 +47,7 @@ function getTransitionLabel(transition: Transition): string {
   if (transition.topic) parts.push(transition.topic);
   parts.push(transition.messageType);
   parts.push(transition.flowType);
-  return parts.join('.');
+  return parts.join(' / ');
 }
 
 function isEndTransition(kind: TransitionKind): boolean {
