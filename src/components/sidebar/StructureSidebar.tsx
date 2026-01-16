@@ -33,15 +33,14 @@ import { cn } from '@/lib/utils';
 import type { TopicKind, TopicData } from '@/types/diagram';
 
 export function StructureSidebar() {
-  const {
-    project,
-    fieldConfig,
-    createTopic,
-    updateTopic,
-    deleteTopic,
-    selectTopic,
-    setRootTopic,
-  } = useDiagramStore();
+  // Use selectors for reactive access
+  const project = useDiagramStore(s => s.getActiveProject());
+  const fieldConfig = useDiagramStore(s => s.fieldConfig);
+  const createTopic = useDiagramStore(s => s.createTopic);
+  const updateTopic = useDiagramStore(s => s.updateTopic);
+  const deleteTopic = useDiagramStore(s => s.deleteTopic);
+  const selectTopic = useDiagramStore(s => s.selectTopic);
+  const setRootTopic = useDiagramStore(s => s.setRootTopic);
 
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [newTopicId, setNewTopicId] = useState('');
@@ -53,6 +52,15 @@ export function StructureSidebar() {
   const [editingTopic, setEditingTopic] = useState<TopicData | null>(null);
   const [editTopicId, setEditTopicId] = useState('');
   const [editTopicLabel, setEditTopicLabel] = useState('');
+
+  // Handle null project case
+  if (!project) {
+    return (
+      <aside className="w-64 bg-sidebar border-r border-sidebar-border flex flex-col items-center justify-center">
+        <p className="text-sm text-sidebar-muted-foreground">No project selected</p>
+      </aside>
+    );
+  }
 
   const handleCreateTopic = () => {
     if (!newTopicId.trim()) return;

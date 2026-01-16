@@ -7,12 +7,17 @@ import { useDiagramStore } from '@/store/diagramStore';
 import { generateTopicPuml, generateAggregatePuml } from '@/lib/pumlGenerator';
 import { renderPumlToSvg } from '@/lib/krokiRenderer';
 import { cn } from '@/lib/utils';
+
 const MIN_CODE_WIDTH = 100;
 const MAX_CODE_WIDTH = 600;
 const DEFAULT_CODE_WIDTH = 320;
 
 export function PreviewPanel() {
-  const { project, viewMode, setViewMode } = useDiagramStore();
+  // Use selector to get active project
+  const project = useDiagramStore(s => s.getActiveProject());
+  const viewMode = useDiagramStore(s => s.viewMode);
+  const setViewMode = useDiagramStore(s => s.setViewMode);
+  
   const [isExpanded, setIsExpanded] = useState(true);
   const [codeWidth, setCodeWidth] = useState(DEFAULT_CODE_WIDTH);
   const [isDragging, setIsDragging] = useState(false);
@@ -21,6 +26,7 @@ export function PreviewPanel() {
   const [error, setError] = useState<string | null>(null);
 
   const pumlText = useMemo(() => {
+    if (!project) return null;
     if (viewMode === 'aggregate') {
       return generateAggregatePuml(project);
     }
@@ -90,6 +96,17 @@ export function PreviewPanel() {
       window.removeEventListener('mouseup', handleMouseUp);
     };
   }, [isDragging]);
+
+  // If no project, show placeholder
+  if (!project) {
+    return (
+      <div className="border-t border-border bg-card flex flex-col h-full overflow-hidden">
+        <div className="flex items-center justify-center h-full text-muted-foreground">
+          <p className="text-sm">No project selected</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="border-t border-border bg-card flex flex-col h-full overflow-hidden">

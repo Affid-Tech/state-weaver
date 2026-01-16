@@ -92,19 +92,18 @@ function computeEdgeIndices(transitions: { id: string; from: string; to: string 
 }
 
 function DiagramCanvasInner() {
-  const {
-    project,
-    selectedElementId,
-    selectedElementType,
-    selectElement,
-    addTransition,
-    updateTransition,
-    updateTransitionRouting,
-    deleteTransition,
-    deleteState,
-    updateStatePosition,
-    addState,
-  } = useDiagramStore();
+  // Use selectors for reactive access
+  const project = useDiagramStore(s => s.getActiveProject());
+  const selectedElementId = useDiagramStore(s => s.selectedElementId);
+  const selectedElementType = useDiagramStore(s => s.selectedElementType);
+  const selectElement = useDiagramStore(s => s.selectElement);
+  const addTransition = useDiagramStore(s => s.addTransition);
+  const updateTransition = useDiagramStore(s => s.updateTransition);
+  const updateTransitionRouting = useDiagramStore(s => s.updateTransitionRouting);
+  const deleteTransition = useDiagramStore(s => s.deleteTransition);
+  const deleteState = useDiagramStore(s => s.deleteState);
+  const updateStatePosition = useDiagramStore(s => s.updateStatePosition);
+  const addState = useDiagramStore(s => s.addState);
 
   const [pendingConnection, setPendingConnection] = useState<PendingConnection | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
@@ -114,9 +113,9 @@ function DiagramCanvasInner() {
   const { getNodes, screenToFlowPosition } = useReactFlow();
 
   const selectedTopicData = useMemo(() => {
-    if (!project.selectedTopicId) return null;
+    if (!project?.selectedTopicId) return null;
     return project.topics.find(t => t.topic.id === project.selectedTopicId) ?? null;
-  }, [project.selectedTopicId, project.topics]);
+  }, [project?.selectedTopicId, project?.topics]);
 
   const handleNodeSelect = useCallback((nodeId: string) => {
     selectElement(nodeId, 'state');
@@ -165,7 +164,7 @@ function DiagramCanvasInner() {
           isSelected: selectedElementId === transition.id && selectedElementType === 'transition',
           onSelect: handleEdgeSelect,
           onUpdateRouting: (curveOffset: number) => {
-            if (project.selectedTopicId) {
+            if (project?.selectedTopicId) {
               updateTransitionRouting(project.selectedTopicId, transition.id, undefined, undefined, curveOffset);
             }
           },
@@ -176,7 +175,7 @@ function DiagramCanvasInner() {
         },
       };
     });
-  }, [selectedTopicData, selectedElementId, selectedElementType, handleEdgeSelect, edgeIndices, project.selectedTopicId, updateTransitionRouting]);
+  }, [selectedTopicData, selectedElementId, selectedElementType, handleEdgeSelect, edgeIndices, project?.selectedTopicId, updateTransitionRouting]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
@@ -208,12 +207,12 @@ function DiagramCanvasInner() {
         
         // Delete selected transitions
         selectedEdges.forEach(edge => {
-          deleteTransition(project.selectedTopicId!, edge.id);
+          deleteTransition(project!.selectedTopicId!, edge.id);
         });
         
         // Delete selected states (will also remove connected transitions)
         selectedNodes.forEach(node => {
-          deleteState(project.selectedTopicId!, node.id);
+          deleteState(project!.selectedTopicId!, node.id);
         });
         
         // Clear selection if anything was deleted
@@ -222,9 +221,9 @@ function DiagramCanvasInner() {
         } else if (selectedElementId) {
           // Fallback for single selection via inspector
           if (selectedElementType === 'transition') {
-            deleteTransition(project.selectedTopicId, selectedElementId);
+            deleteTransition(project!.selectedTopicId!, selectedElementId);
           } else if (selectedElementType === 'state') {
-            deleteState(project.selectedTopicId, selectedElementId);
+            deleteState(project!.selectedTopicId!, selectedElementId);
           }
           selectElement(null, null);
         }
@@ -233,11 +232,11 @@ function DiagramCanvasInner() {
     
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [project.selectedTopicId, selectedElementId, selectedElementType, deleteTransition, deleteState, selectElement, getNodes, edges]);
+  }, [project?.selectedTopicId, selectedElementId, selectedElementType, deleteTransition, deleteState, selectElement, getNodes, edges]);
 
   const onConnect = useCallback(
     (params: Connection) => {
-      if (!project.selectedTopicId || !params.source || !params.target || !selectedTopicData) return;
+      if (!project?.selectedTopicId || !params.source || !params.target || !selectedTopicData) return;
       
       // Check if target is an end node (TopicEnd or InstrumentEnd)
       const targetState = selectedTopicData.states.find(s => s.id === params.target);
@@ -265,12 +264,12 @@ function DiagramCanvasInner() {
         });
       }
     },
-    [project.selectedTopicId, selectedTopicData, addTransition, selectElement]
+    [project?.selectedTopicId, selectedTopicData, addTransition, selectElement]
   );
 
   const handleCreateTransition = useCallback(
     (messageType: string, flowType: FlowType) => {
-      if (!project.selectedTopicId || !pendingConnection) return;
+      if (!project?.selectedTopicId || !pendingConnection) return;
       const transitionId = addTransition(
         project.selectedTopicId, 
         pendingConnection.source, 
@@ -284,7 +283,7 @@ function DiagramCanvasInner() {
       // Select the new transition
       selectElement(transitionId, 'transition');
     },
-    [project.selectedTopicId, pendingConnection, addTransition, selectElement]
+    [project?.selectedTopicId, pendingConnection, addTransition, selectElement]
   );
 
   const handleCancelTransition = useCallback(() => {
@@ -294,13 +293,13 @@ function DiagramCanvasInner() {
   // Handle drag stop for single node or selection
   const onNodeDragStop = useCallback(
     (_event: React.MouseEvent, node: Node, draggedNodes: Node[]) => {
-      if (!project.selectedTopicId) return;
+      if (!project?.selectedTopicId) return;
       // Update positions for all dragged nodes (supports bulk move)
       draggedNodes.forEach(n => {
         updateStatePosition(project.selectedTopicId!, n.id, n.position);
       });
     },
-    [project.selectedTopicId, updateStatePosition]
+    [project?.selectedTopicId, updateStatePosition]
   );
 
   const onPaneClick = useCallback(() => {
@@ -325,27 +324,26 @@ function DiagramCanvasInner() {
 
   // Context menu handler for new state
   const handleContextMenuNewState = useCallback((e: React.MouseEvent) => {
-    if (!project.selectedTopicId || !reactFlowWrapper.current) return;
+    if (!project?.selectedTopicId || !reactFlowWrapper.current) return;
     
-    const bounds = reactFlowWrapper.current.getBoundingClientRect();
     const position = screenToFlowPosition({
       x: e.clientX,
       y: e.clientY,
     });
     setNewStatePosition(position);
     setNewStateDialogOpen(true);
-  }, [project.selectedTopicId, screenToFlowPosition]);
+  }, [project?.selectedTopicId, screenToFlowPosition]);
 
   const handleCreateState = useCallback((label: string) => {
-    if (!project.selectedTopicId) return;
+    if (!project?.selectedTopicId) return;
     addState(project.selectedTopicId, label, newStatePosition);
     setNewStateDialogOpen(false);
-  }, [project.selectedTopicId, addState, newStatePosition]);
+  }, [project?.selectedTopicId, addState, newStatePosition]);
 
   // Handle edge reconnection (detach and reattach to different nodes)
   const onReconnect = useCallback(
     (oldEdge: Edge, newConnection: Connection) => {
-      if (!project.selectedTopicId || !newConnection.source || !newConnection.target) return;
+      if (!project?.selectedTopicId || !newConnection.source || !newConnection.target) return;
       
       // Update the transition in the store with new source/target and handle IDs
       updateTransition(project.selectedTopicId, oldEdge.id, {
@@ -364,7 +362,7 @@ function DiagramCanvasInner() {
       // Update local edges state
       setEdges((els) => reconnectEdge(oldEdge, newConnection, els));
     },
-    [project.selectedTopicId, updateTransition, updateTransitionRouting, setEdges]
+    [project?.selectedTopicId, updateTransition, updateTransitionRouting, setEdges]
   );
 
   // Custom edges change handler to sync deletions with store
@@ -374,12 +372,12 @@ function DiagramCanvasInner() {
       
       // Handle edge removals - sync with store
       changes.forEach((change) => {
-        if (change.type === 'remove' && project.selectedTopicId) {
+        if (change.type === 'remove' && project?.selectedTopicId) {
           deleteTransition(project.selectedTopicId, change.id);
         }
       });
     },
-    [onEdgesChange, project.selectedTopicId, deleteTransition]
+    [onEdgesChange, project?.selectedTopicId, deleteTransition]
   );
 
   if (!selectedTopicData) {

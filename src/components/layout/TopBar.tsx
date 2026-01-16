@@ -25,18 +25,26 @@ import { useState } from 'react';
 
 export function TopBar() {
   const navigate = useNavigate();
-  const {
-    project,
-    viewMode,
-    exportProject,
-    importProject,
-  } = useDiagramStore();
+  // Use selectors for reactive access
+  const project = useDiagramStore(s => s.getActiveProject());
+  const viewMode = useDiagramStore(s => s.viewMode);
+  const exportProject = useDiagramStore(s => s.exportProject);
+  const importProject = useDiagramStore(s => s.importProject);
 
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const validationIssues = useMemo(() => validateProject(project), [project]);
+  const validationIssues = useMemo(() => project ? validateProject(project) : [], [project]);
   const hasErrors = hasBlockingErrors(validationIssues);
+
+  // Handle null project case
+  if (!project) {
+    return (
+      <header className="h-14 bg-card border-b border-border flex items-center px-4">
+        <span className="text-muted-foreground">No project selected</span>
+      </header>
+    );
+  }
 
   // Display name: use label if available, otherwise type
   const displayName = project.instrument.label || project.instrument.type;
