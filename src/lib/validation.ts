@@ -159,7 +159,20 @@ function validateTopic(topicData: TopicData, instrumentType: string, fieldConfig
 
   // Check for required start transitions
   const startNodeId = topic.kind === 'root' ? 'NewInstrument' : 'TopicStart';
-  const hasStartTransition = transitions.some(t => t.from === startNodeId);
+  const hasStartTransition = transitions.some(
+    t => {
+      if (t.from !== startNodeId) return false;
+      const targetState = states.find(s => s.id === t.to);
+      if (targetState?.systemNodeType !== 'Fork') {
+        return true;
+      }
+      return transitions.some(
+        forkTransition =>
+          forkTransition.from === t.to &&
+          states.find(s => s.id === forkTransition.to)?.systemNodeType !== 'Fork'
+      );
+    }
+  );
   if (!hasStartTransition) {
     issues.push({
       id: uuidv4(),
@@ -170,7 +183,20 @@ function validateTopic(topicData: TopicData, instrumentType: string, fieldConfig
   }
 
   // Check for path to TopicEnd (simplified check - at least one transition to TopicEnd)
-  const hasEndTransition = transitions.some(t => t.to === 'TopicEnd');
+  const hasEndTransition = transitions.some(
+    t => {
+      if (t.to !== 'TopicEnd') return false;
+      const sourceState = states.find(s => s.id === t.from);
+      if (sourceState?.systemNodeType !== 'Fork') {
+        return true;
+      }
+      return transitions.some(
+        forkTransition =>
+          forkTransition.to === t.from &&
+          states.find(s => s.id === forkTransition.from)?.systemNodeType !== 'Fork'
+      );
+    }
+  );
   if (!hasEndTransition) {
     issues.push({
       id: uuidv4(),
