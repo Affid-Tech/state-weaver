@@ -5,6 +5,7 @@ import {Input} from '@/components/ui/input';
 import {Tabs, TabsContent, TabsList, TabsTrigger} from '@/components/ui/tabs';
 import {ScrollArea} from '@/components/ui/scroll-area';
 import {Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,} from '@/components/ui/dialog';
+import {Popover, PopoverContent, PopoverTrigger} from '@/components/ui/popover';
 import {useDiagramStore} from '@/store/diagramStore';
 import {toast} from 'sonner';
 import {isValidEnumName} from '@/lib/validation';
@@ -24,6 +25,18 @@ const FIELD_LABELS: Record<FieldKey, string> = {
   messageTypes: 'Message Types',
   flowTypes: 'Flow Types',
 };
+
+const FLOW_TYPE_COLOR_PRESETS = [
+  '#ef4444',
+  '#f97316',
+  '#f59e0b',
+  '#22c55e',
+  '#14b8a6',
+  '#3b82f6',
+  '#6366f1',
+  '#a855f7',
+  '#ec4899',
+];
 
 export function FieldConfigDialog({ open, onOpenChange }: FieldConfigDialogProps) {
   const { fieldConfig, updateFieldConfig } = useDiagramStore();
@@ -56,8 +69,26 @@ export function FieldConfigDialog({ open, onOpenChange }: FieldConfigDialogProps
   };
 
   const handleRemoveValue = (field: FieldKey, value: string) => {
+    if (field === 'flowTypes') {
+      const updatedColors = { ...(fieldConfig.flowTypeColors ?? {}) };
+      delete updatedColors[value];
+      updateFieldConfig({
+        [field]: fieldConfig[field].filter((v) => v !== value),
+        flowTypeColors: updatedColors,
+      });
+      return;
+    }
     updateFieldConfig({
       [field]: fieldConfig[field].filter((v) => v !== value),
+    });
+  };
+
+  const handleFlowTypeColorChange = (flowType: string, color: string) => {
+    updateFieldConfig({
+      flowTypeColors: {
+        ...(fieldConfig.flowTypeColors ?? {}),
+        [flowType]: color,
+      },
     });
   };
 
@@ -75,7 +106,45 @@ export function FieldConfigDialog({ open, onOpenChange }: FieldConfigDialogProps
                 key={value}
                 className="flex items-center justify-between px-3 py-2 rounded-md bg-muted"
               >
-                <span className="text-sm font-mono">{value}</span>
+                {field === 'flowTypes' ? (
+                  <div className="flex items-center gap-2">
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <button
+                          type="button"
+                          className="h-6 w-6 rounded-full border border-muted-foreground/40"
+                          style={{ backgroundColor: fieldConfig.flowTypeColors?.[value] ?? 'transparent' }}
+                          aria-label={`Pick color for ${value}`}
+                        />
+                      </PopoverTrigger>
+                      <PopoverContent align="start" className="w-48 p-3">
+                        <div className="flex flex-col gap-3">
+                          <input
+                            type="color"
+                            value={fieldConfig.flowTypeColors?.[value] ?? '#000000'}
+                            onChange={(event) => handleFlowTypeColorChange(value, event.target.value)}
+                            className="h-8 w-full cursor-pointer rounded-md border border-input bg-background p-1"
+                          />
+                          <div className="flex flex-wrap gap-2">
+                            {FLOW_TYPE_COLOR_PRESETS.map((preset) => (
+                              <button
+                                key={preset}
+                                type="button"
+                                className="h-6 w-6 rounded-full border border-muted-foreground/40"
+                                style={{ backgroundColor: preset }}
+                                onClick={() => handleFlowTypeColorChange(value, preset)}
+                                aria-label={`Set ${value} color to ${preset}`}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                    <span className="text-sm font-mono">{value}</span>
+                  </div>
+                ) : (
+                  <span className="text-sm font-mono">{value}</span>
+                )}
                 <Button
                   size="icon"
                   variant="ghost"
