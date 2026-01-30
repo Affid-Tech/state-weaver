@@ -4,6 +4,7 @@ export interface FieldConfig {
   topicTypes: string[];
   messageTypes: string[];
   flowTypes: string[];
+  flowTypeColors?: Record<string, string>;
 }
 
 export const DEFAULT_FIELD_CONFIG: FieldConfig = {
@@ -12,4 +13,5 @@ export const DEFAULT_FIELD_CONFIG: FieldConfig = {
   topicTypes: [],
   messageTypes: [],
   flowTypes: [],
+  flowTypeColors: {},
 };
