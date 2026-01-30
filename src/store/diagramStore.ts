@@ -26,6 +26,7 @@ export interface DiagramState {
   selectedElementId: string | null;
   selectedElementType: 'state' | 'transition' | null;
   viewMode: 'topic' | 'aggregate';
+  hiddenSelfLoopTransitionIds: Record<string, true>;
   
   // Global field config (shared across all projects)
   fieldConfig: FieldConfig;
@@ -68,6 +69,10 @@ export interface DiagramState {
   
   // View mode
   setViewMode: (mode: 'topic' | 'aggregate') => void;
+
+  // Self-loop visibility
+  isSelfLoopTransitionHidden: (transitionId: string) => boolean;
+  toggleSelfLoopTransitionVisibility: (transitionId: string) => void;
   
   // Field config
   updateFieldConfig: (config: Partial<FieldConfig>) => void;
@@ -154,6 +159,7 @@ export const useDiagramStore = create<DiagramState>()(
         selectedElementId: null,
         selectedElementType: null,
         viewMode: 'topic',
+        hiddenSelfLoopTransitionIds: {},
         fieldConfig: DEFAULT_FIELD_CONFIG,
 
         getActiveProject: () => {
@@ -528,6 +534,7 @@ export const useDiagramStore = create<DiagramState>()(
           const topicData = project.topics.find(t => t.topic.id === topicId);
           if (topicData) {
             topicData.transitions = topicData.transitions.filter(t => t.id !== transitionId);
+            delete state.hiddenSelfLoopTransitionIds[transitionId];
             project.updatedAt = new Date().toISOString();
           }
         }),
@@ -555,6 +562,19 @@ export const useDiagramStore = create<DiagramState>()(
         
         setViewMode: (mode) => set((state) => {
           state.viewMode = mode;
+        }),
+
+        isSelfLoopTransitionHidden: (transitionId) => {
+          const state = get();
+          return Boolean(state.hiddenSelfLoopTransitionIds[transitionId]);
+        },
+
+        toggleSelfLoopTransitionVisibility: (transitionId) => set((state) => {
+          if (state.hiddenSelfLoopTransitionIds[transitionId]) {
+            delete state.hiddenSelfLoopTransitionIds[transitionId];
+          } else {
+            state.hiddenSelfLoopTransitionIds[transitionId] = true;
+          }
         }),
         
         updateFieldConfig: (config) => set((state) => {
@@ -607,6 +627,7 @@ export const useDiagramStore = create<DiagramState>()(
               state.activeProjectId = null;
               state.selectedElementId = null;
               state.selectedElementType = null;
+              state.hiddenSelfLoopTransitionIds = newState.hiddenSelfLoopTransitionIds ?? {};
             });
             return true;
           } catch {
@@ -620,6 +641,7 @@ export const useDiagramStore = create<DiagramState>()(
           state.activeProjectId = null;
           state.selectedElementId = null;
           state.selectedElementType = null;
+          state.hiddenSelfLoopTransitionIds = {};
         }),
       };
     }),
@@ -631,6 +653,7 @@ export const useDiagramStore = create<DiagramState>()(
         selectedElementId: state.selectedElementId,
         selectedElementType: state.selectedElementType,
         viewMode: state.viewMode,
+        hiddenSelfLoopTransitionIds: state.hiddenSelfLoopTransitionIds,
         fieldConfig: state.fieldConfig,
       }),
       onRehydrateStorage: () => (state) => {
