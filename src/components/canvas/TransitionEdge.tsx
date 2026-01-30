@@ -478,12 +478,14 @@ export const TransitionEdge = memo(({
           <div
             onMouseDown={handleControlPointMouseDown}
             className={cn(
-              'absolute w-4 h-4 rounded-full pointer-events-auto border-2 shadow-md transition-colors',
+              'absolute z-20 w-4 h-4 rounded-full pointer-events-auto border-2 shadow-md transition-colors',
               'bg-primary border-primary-foreground',
               isDragging ? 'cursor-grabbing scale-125' : 'cursor-grab hover:scale-110'
             )}
             style={{
               transform: `translate(-50%, -50%) translate(${ctrlX}px,${ctrlY}px)`,
+              pointerEvents: 'all',
+              zIndex: 20,
             }}
             title="Drag to adjust curve"
           />
