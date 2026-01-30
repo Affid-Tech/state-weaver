@@ -52,6 +52,7 @@ export interface DiagramState {
   addState: (topicId: string, label: string, position?: Position) => void;
   addInstrumentEnd: (topicId: string) => void;
   addTopicEnd: (topicId: string) => void;
+  addFork: (topicId: string, position?: Position) => void;
   updateState: (topicId: string, stateId: string, updates: Partial<StateNode>) => void;
   deleteState: (topicId: string, stateId: string) => void;
   updateStatePosition: (topicId: string, stateId: string, position: Position) => void;
@@ -397,6 +398,24 @@ export const useDiagramStore = create<DiagramState>()(
             }
           }
         }),
+
+        addFork: (topicId, position) => set((state) => {
+          const project = state.projects.find(p => p.id === state.activeProjectId);
+          if (!project) return;
+
+          const topicData = project.topics.find(t => t.topic.id === topicId);
+          if (topicData) {
+            const forkNode: StateNode = {
+              id: uuidv4(),
+              label: 'Fork',
+              position: position ?? { x: 300, y: 200 },
+              isSystemNode: true,
+              systemNodeType: 'Fork',
+            };
+            topicData.states.push(forkNode);
+            project.updatedAt = new Date().toISOString();
+          }
+        }),
         
         updateState: (topicId, stateId, updates) => set((state) => {
           const project = state.projects.find(p => p.id === state.activeProjectId);
@@ -419,7 +438,7 @@ export const useDiagramStore = create<DiagramState>()(
           const topicData = project.topics.find(t => t.topic.id === topicId);
           if (topicData) {
             const stateNode = topicData.states.find(s => s.id === stateId);
-            if (stateNode && !stateNode.isSystemNode) {
+            if (stateNode && (!stateNode.isSystemNode || stateNode.systemNodeType === 'Fork')) {
               topicData.states = topicData.states.filter(s => s.id !== stateId);
               topicData.transitions = topicData.transitions.filter(
                 t => t.from !== stateId && t.to !== stateId

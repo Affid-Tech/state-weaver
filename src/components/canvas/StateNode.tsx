@@ -35,6 +35,8 @@ export const StateNodeComponent = memo(({ data, id }: StateNodeProps) => {
           return 'bg-state-system text-state-system-foreground border-state-system-border';
         case 'InstrumentEnd':
           return 'bg-state-end text-state-end-foreground border-state-end-border';
+        case 'Fork':
+          return 'bg-state-system text-state-system-foreground border-state-system-border';
         default:
           return 'bg-state text-state-foreground border-state-border';
       }
@@ -44,6 +46,7 @@ export const StateNodeComponent = memo(({ data, id }: StateNodeProps) => {
 
   const isStart = state.systemNodeType === 'TopicStart' || state.systemNodeType === 'NewInstrument';
   const isEnd = state.systemNodeType === 'TopicEnd' || state.systemNodeType === 'InstrumentEnd';
+  const isFork = state.systemNodeType === 'Fork';
 
   // Show handles on hover, selection, or during connection
   const showHandles = isHovered || isSelected || isConnecting;
@@ -60,7 +63,8 @@ export const StateNodeComponent = memo(({ data, id }: StateNodeProps) => {
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       className={cn(
-        'px-4 py-3 rounded-lg border-2 shadow-sm cursor-pointer transition-all min-w-[120px] text-center relative',
+        'border-2 shadow-sm cursor-pointer transition-all relative flex items-center justify-center',
+        isFork ? 'h-10 w-10 rounded-full' : 'px-4 py-3 rounded-lg min-w-[120px] text-center',
         getNodeStyle(),
         isSelected && 'ring-2 ring-state-selected-ring ring-offset-2 ring-offset-background'
       )}
@@ -95,7 +99,7 @@ export const StateNodeComponent = memo(({ data, id }: StateNodeProps) => {
         </>
       )}
       
-      <div className="flex items-center justify-center gap-2">
+      <div className={cn('flex items-center justify-center gap-2', isFork && 'sr-only')}>
         {state.isSystemNode && (
           <Lock className="w-3 h-3 opacity-70" />
         )}
@@ -103,6 +107,12 @@ export const StateNodeComponent = memo(({ data, id }: StateNodeProps) => {
           {state.label || state.id}
         </span>
       </div>
+
+      {isFork && (
+        <span className="absolute -bottom-5 left-1/2 -translate-x-1/2 text-[10px] text-muted-foreground">
+          {state.label || state.id}
+        </span>
+      )}
       
       {state.stereotype && state.stereotype !== state.id && (
         <div className="text-xs opacity-70 mt-1">
