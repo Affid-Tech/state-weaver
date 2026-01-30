@@ -126,9 +126,43 @@ const createSystemNodes = (kind: TopicKind): StateNode[] => {
   ];
 };
 
-const normalizeTopicEndMarkers = (projects: DiagramProject[]) => {
+const LEGACY_END_NODE_IDS = new Set(['EndTopic', 'EndInstrument', 'EndInsturment']);
+
+const isLegacyEndNode = (state: StateNode): boolean => {
+  if (LEGACY_END_NODE_IDS.has(state.id)) return true;
+  if (LEGACY_END_NODE_IDS.has(state.label)) return true;
+  if (state.stereotype && LEGACY_END_NODE_IDS.has(state.stereotype)) return true;
+  return false;
+};
+
+const normalizeTopicEndMarkers = (projects: DiagramProject[]): Set<string> => {
+  const removedTransitionIds = new Set<string>();
   projects.forEach((project) => {
     project.topics.forEach((topicData) => {
+      const legacyEndStateIds = new Set(
+        topicData.states.filter(isLegacyEndNode).map((state) => state.id)
+      );
+      if (legacyEndStateIds.size > 0) {
+        const transitionsToRemove = new Set<string>();
+        topicData.transitions.forEach((transition) => {
+          if (legacyEndStateIds.has(transition.to)) {
+            const fromState = topicData.states.find((state) => state.id === transition.from);
+            if (fromState && fromState.topicEndKind == null) {
+              fromState.topicEndKind = 'positive';
+            }
+            transitionsToRemove.add(transition.id);
+            removedTransitionIds.add(transition.id);
+          }
+        });
+        if (transitionsToRemove.size > 0) {
+          topicData.transitions = topicData.transitions.filter(
+            (transition) => !transitionsToRemove.has(transition.id)
+          );
+        }
+        topicData.states = topicData.states.filter(
+          (state) => !legacyEndStateIds.has(state.id)
+        );
+      }
       topicData.states.forEach((state) => {
         const hasTopicEndKind = Object.prototype.hasOwnProperty.call(state, 'topicEndKind');
         if (hasTopicEndKind && state.topicEndKind == null) {
@@ -148,6 +182,7 @@ const normalizeTopicEndMarkers = (projects: DiagramProject[]) => {
       });
     });
   });
+  return removedTransitionIds;
 };
 
 const createNewProject = (instrument: Partial<Instrument> = {}): DiagramProject => {
@@ -631,7 +666,7 @@ export const useDiagramStore = create<DiagramState>()(
           try {
             const newState = JSON.parse(json) as DiagramState;
             // Give it a new ID to avoid conflicts
-            normalizeTopicEndMarkers(newState.projects);
+            const removedTransitionIds = normalizeTopicEndMarkers(newState.projects);
 
             set((state) => {
               state.projects = newState.projects;
@@ -641,6 +676,10 @@ export const useDiagramStore = create<DiagramState>()(
               state.selectedElementId = null;
               state.selectedElementType = null;
               state.hiddenSelfLoopTransitionIds = newState.hiddenSelfLoopTransitionIds ?? {};
+              removedTransitionIds.forEach((transitionId) => {
+                delete state.transitionVisibility[transitionId];
+                delete state.hiddenSelfLoopTransitionIds[transitionId];
+              });
             });
             return true;
           } catch {
@@ -672,7 +711,11 @@ export const useDiagramStore = create<DiagramState>()(
       onRehydrateStorage: () => (state) => {
         // Fix up any inconsistent state after rehydration
         if (state) {
-          normalizeTopicEndMarkers(state.projects);
+          const removedTransitionIds = normalizeTopicEndMarkers(state.projects);
+          removedTransitionIds.forEach((transitionId) => {
+            delete state.transitionVisibility[transitionId];
+            delete state.hiddenSelfLoopTransitionIds[transitionId];
+          });
           // If activeProjectId points to non-existent project, fix it
           if (state.activeProjectId && !state.projects.some(p => p.id === state.activeProjectId)) {
             state.activeProjectId = state.projects[0]?.id || null;
