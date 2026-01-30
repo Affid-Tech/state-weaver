@@ -384,12 +384,6 @@ export const useDiagramStore = create<DiagramState>()(
               : undefined;
             if (selectedState && !selectedState.isSystemNode) {
               selectedState.isTopicEnd = true;
-              topicData.transitions.forEach((transition) => {
-                if (transition.to === selectedState.id) {
-                  const fromState = topicData.states.find(s => s.id === transition.from);
-                  transition.kind = deriveTransitionKind(fromState, selectedState);
-                }
-              });
               project.updatedAt = new Date().toISOString();
               return;
             }
@@ -438,14 +432,6 @@ export const useDiagramStore = create<DiagramState>()(
             const stateNode = topicData.states.find(s => s.id === stateId);
             if (stateNode && !stateNode.isSystemNode) {
               Object.assign(stateNode, updates);
-              if (updates.isTopicEnd !== undefined) {
-                topicData.transitions.forEach((transition) => {
-                  if (transition.to === stateNode.id) {
-                    const fromState = topicData.states.find(s => s.id === transition.from);
-                    transition.kind = deriveTransitionKind(fromState, stateNode);
-                  }
-                });
-              }
               project.updatedAt = new Date().toISOString();
             }
           }

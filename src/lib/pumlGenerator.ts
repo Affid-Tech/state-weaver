@@ -165,6 +165,9 @@ export function generateTopicPuml(project: DiagramProject, topicId: string): str
   const { instrument } = project;
   const { topic, states } = topicData;
   const renderTransitions = getTopicRenderTransitions(topicData, instrument);
+  const markedTopicEnds = states.filter((state) => state.isTopicEnd && !state.isSystemNode);
+  const hasTopicEndNode = states.some((state) => state.systemNodeType === 'TopicEnd');
+  const hasSyntheticTopicEnd = !hasTopicEndNode && markedTopicEnds.length > 0;
 
   const lines: string[] = [];
   lines.push('@startuml');
@@ -207,14 +210,15 @@ export function generateTopicPuml(project: DiagramProject, topicId: string): str
       lines.push(`state ${instrument.type}.${topic.id}.End as "Topic End" <<exitPoint>>`);
     } else if (state.systemNodeType === 'InstrumentEnd') {
       // Already declared at top level
-    } else if (state.isTopicEnd) {
-      lines.push(`state "${escapeLabel(state.label)}" as ${qualifiedId} <<exitPoint>>`);
     } else {
       const label = state.label;
       const stereotype = state.stereotype || stateEnumId;
       lines.push(`state "${escapeLabel(label)}" as ${qualifiedId} <<${stereotype}>>`);
     }
   });
+  if (hasSyntheticTopicEnd) {
+    lines.push(`state ${instrument.type}.${topic.id}.End as "Topic End" <<exitPoint>>`);
+  }
   lines.push('');
 
   // Transitions
@@ -259,6 +263,11 @@ export function generateTopicPuml(project: DiagramProject, topicId: string): str
     } else {
       lines.push(`${fromAlias} --> ${toAlias}`);
     }
+  });
+  markedTopicEnds.forEach((state) => {
+    const stateAlias = `${instrument.type}.${topic.id}.${getStateEnumId(state)}`;
+    const endAlias = `${instrument.type}.${topic.id}.End`;
+    lines.push(`${stateAlias} --> ${endAlias}`);
   });
   lines.push('');
 
@@ -310,6 +319,13 @@ export function generateAggregatePuml(project: DiagramProject): string | null {
   // All root topics
   rootTopics.forEach((rootTopic) => {
     const rootId = `${instrument.type}.${rootTopic.topic.id}`;
+    const rootMarkedTopicEnds = rootTopic.states.filter(
+      (state) => state.isTopicEnd && !state.isSystemNode
+    );
+    const rootHasTopicEndNode = rootTopic.states.some(
+      (state) => state.systemNodeType === 'TopicEnd'
+    );
+    const rootHasSyntheticTopicEnd = !rootHasTopicEndNode && rootMarkedTopicEnds.length > 0;
     lines.push(`  state "${rootTopic.topic.label || rootTopic.topic.id}" as ${rootId} {`);
     rootTopic.states.forEach((state) => {
       if (state.systemNodeType === 'NewInstrument') {
@@ -320,9 +336,6 @@ export function generateAggregatePuml(project: DiagramProject): string | null {
         lines.push(`    state ${rootId}.End as "Topic End" <<exitPoint>>`);
       } else if (state.systemNodeType === 'InstrumentEnd') {
         // Skip, declared at top level
-      } else if (state.isTopicEnd) {
-        const stateEnumId = getStateEnumId(state);
-        lines.push(`    state "${escapeLabel(state.label)}" as ${rootId}.${stateEnumId} <<exitPoint>>`);
       } else {
         const stateEnumId = getStateEnumId(state);
         const label = state.label;
@@ -330,6 +343,9 @@ export function generateAggregatePuml(project: DiagramProject): string | null {
         lines.push(`    state "${escapeLabel(label)}" as ${rootId}.${stateEnumId} <<${stereotype}>>`);
       }
     });
+    if (rootHasSyntheticTopicEnd) {
+      lines.push(`    state ${rootId}.End as "Topic End" <<exitPoint>>`);
+    }
     lines.push('');
     
     // Transitions within root topic (excluding connections to NewInstrument - handled externally)
@@ -354,6 +370,10 @@ export function generateAggregatePuml(project: DiagramProject): string | null {
         lines.push(`    ${fromAlias} --> ${toAlias}`);
       }
     });
+    rootMarkedTopicEnds.forEach((state) => {
+      const stateEnumId = getStateEnumId(state);
+      lines.push(`    ${rootId}.${stateEnumId} --> ${rootId}.End`);
+    });
     lines.push('  }');
     lines.push('');
   });
@@ -369,6 +389,13 @@ export function generateAggregatePuml(project: DiagramProject): string | null {
   // Normal topics
   normalTopics.forEach((topicData) => {
     const topicAlias = `${instrument.type}.${topicData.topic.id}`;
+    const markedTopicEnds = topicData.states.filter(
+      (state) => state.isTopicEnd && !state.isSystemNode
+    );
+    const hasTopicEndNode = topicData.states.some(
+      (state) => state.systemNodeType === 'TopicEnd'
+    );
+    const hasSyntheticTopicEnd = !hasTopicEndNode && markedTopicEnds.length > 0;
     lines.push(`  state "${topicData.topic.label || topicData.topic.id}" as ${topicAlias} {`);
     topicData.states.forEach((state) => {
       if (state.systemNodeType === 'TopicStart') {
@@ -379,9 +406,6 @@ export function generateAggregatePuml(project: DiagramProject): string | null {
         lines.push(`    state ${topicAlias}.End as "Topic End" <<exitPoint>>`);
       } else if (state.systemNodeType === 'InstrumentEnd') {
         // Skip, declared at top level
-      } else if (state.isTopicEnd) {
-        const stateEnumId = getStateEnumId(state);
-        lines.push(`    state "${escapeLabel(state.label)}" as ${topicAlias}.${stateEnumId} <<exitPoint>>`);
       } else {
         const stateEnumId = getStateEnumId(state);
         const label = state.label;
@@ -389,6 +413,9 @@ export function generateAggregatePuml(project: DiagramProject): string | null {
         lines.push(`    state "${escapeLabel(label)}" as ${topicAlias}.${stateEnumId} <<${stereotype}>>`);
       }
     });
+    if (hasSyntheticTopicEnd) {
+      lines.push(`    state ${topicAlias}.End as "Topic End" <<exitPoint>>`);
+    }
     lines.push('');
     getExpandedTransitions(topicData).forEach((transition) => {
       const fromState = topicData.states.find(s => s.id === transition.from);
@@ -409,6 +436,10 @@ export function generateAggregatePuml(project: DiagramProject): string | null {
         lines.push(`    ${fromAlias} --> ${toAlias}`);
       }
     });
+    markedTopicEnds.forEach((state) => {
+      const stateEnumId = getStateEnumId(state);
+      lines.push(`    ${topicAlias}.${stateEnumId} --> ${topicAlias}.End`);
+    });
     lines.push('  }');
     lines.push('');
   });
@@ -428,10 +459,7 @@ export function generateAggregatePuml(project: DiagramProject): string | null {
       topicData.states
         .filter((state) => isTopicEndState(state))
         .forEach((state) => {
-          const endAlias = isTopicEndSystemNode(state)
-            ? `${topicAlias}.End`
-            : `${topicAlias}.${getStateEnumId(state)}`;
-          lines.push(`  ${endAlias} --> ${instrument.type}_NewTopic_In`);
+          lines.push(`  ${topicAlias}.End --> ${instrument.type}_NewTopic_In`);
         });
     });
     lines.push('');
@@ -476,10 +504,7 @@ export function generateAggregatePuml(project: DiagramProject): string | null {
       rootTopic.states
         .filter((state) => isTopicEndState(state))
         .forEach((state) => {
-          const endAlias = isTopicEndSystemNode(state)
-            ? `${rootId}.End`
-            : `${rootId}.${getStateEnumId(state)}`;
-          lines.push(`${endAlias} --> ${instrument.type}_NewTopic_Out`);
+          lines.push(`${rootId}.End --> ${instrument.type}_NewTopic_Out`);
         });
     });
     lines.push('');

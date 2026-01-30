@@ -85,8 +85,10 @@ export function validateProject(project: DiagramProject, fieldConfig?: FieldConf
 function validateTopic(topicData: TopicData, instrumentType: string, fieldConfig?: FieldConfig): ValidationIssue[] {
   const issues: ValidationIssue[] = [];
   const { topic, states, transitions } = topicData;
+  const isTopicEndSystemNode = (state: { systemNodeType?: string } | undefined) =>
+    state?.systemNodeType === 'TopicEnd';
   const isTopicEndState = (state: { systemNodeType?: string; isTopicEnd?: boolean } | undefined) =>
-    state?.systemNodeType === 'TopicEnd' || state?.isTopicEnd;
+    isTopicEndSystemNode(state) || state?.isTopicEnd;
 
   // Validate topic ID
   if (!topic.id || topic.id.trim() === '') {
@@ -260,11 +262,11 @@ function validateTopic(topicData: TopicData, instrumentType: string, fieldConfig
       });
     }
 
-    if (transition.kind === 'endTopic' && !isTopicEndState(toState)) {
+    if (transition.kind === 'endTopic' && !isTopicEndSystemNode(toState)) {
       issues.push({
         id: uuidv4(),
         level: 'error',
-        message: `endTopic transition must end at a TopicEnd or marked end-topic state`,
+        message: `endTopic transition must end at a TopicEnd system node`,
         topicId: topic.id,
         elementId: transition.id,
         elementType: 'transition',
