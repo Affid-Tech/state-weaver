@@ -1,5 +1,5 @@
 import type { DiagramProject, TopicData, ValidationIssue, Transition } from '@/types/diagram';
-import { isRoutingOnlyTransition, labelToEnumId } from '@/types/diagram';
+import { isRoutingOnlyTransition, isTopicEndState, labelToEnumId } from '@/types/diagram';
 import type { FieldConfig } from '@/types/fieldConfig';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -87,8 +87,6 @@ function validateTopic(topicData: TopicData, instrumentType: string, fieldConfig
   const { topic, states, transitions } = topicData;
   const isTopicEndSystemNode = (state: { systemNodeType?: string } | undefined) =>
     state?.systemNodeType === 'TopicEnd';
-  const isTopicEndState = (state: { systemNodeType?: string; isTopicEnd?: boolean } | undefined) =>
-    isTopicEndSystemNode(state) || state?.isTopicEnd;
 
   // Validate topic ID
   if (!topic.id || topic.id.trim() === '') {

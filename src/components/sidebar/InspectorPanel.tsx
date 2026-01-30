@@ -28,6 +28,7 @@ import { Combobox } from '@/components/ui/combobox';
 import { useDiagramStore } from '@/store/diagramStore';
 import { validateProject } from '@/lib/validation';
 import { cn } from '@/lib/utils';
+import { getTopicEndKind } from '@/types/diagram';
 import type { FlowType, Transition } from '@/types/diagram';
 
 const DEFAULT_FLOW_TYPES: FlowType[] = ['B2B', 'B2C', 'C2B', 'C2C'];
@@ -95,7 +96,7 @@ export function InspectorPanel() {
 
   const hasTopicEnd = useMemo(() => {
     if (!selectedTopicData) return false;
-    return selectedTopicData.states.some(s => s.systemNodeType === 'TopicEnd' || s.isTopicEnd);
+    return selectedTopicData.states.some(s => s.systemNodeType === 'TopicEnd' || getTopicEndKind(s));
   }, [selectedTopicData]);
 
   const selfLoopTransitions = useMemo(() => {
@@ -313,10 +314,10 @@ export function InspectorPanel() {
                     <div className="flex items-center space-x-2">
                       <Checkbox
                         id="state-topic-end"
-                        checked={Boolean(selectedState.isTopicEnd)}
+                        checked={Boolean(getTopicEndKind(selectedState))}
                         onCheckedChange={(checked) => {
                           if (project.selectedTopicId) {
-                            updateState(project.selectedTopicId, selectedState.id, { isTopicEnd: checked === true });
+                            updateState(project.selectedTopicId, selectedState.id, { topicEndKind: checked === true ? 'positive' : undefined });
                           }
                         }}
                       />

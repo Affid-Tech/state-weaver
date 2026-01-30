@@ -13,7 +13,7 @@ import type {
   FlowType,
   Position 
 } from '@/types/diagram';
-import { deriveTransitionKind } from '@/types/diagram';
+import { deriveTransitionKind, getTopicEndKind } from '@/types/diagram';
 import type { FieldConfig } from '@/types/fieldConfig';
 import { DEFAULT_FIELD_CONFIG } from '@/types/fieldConfig';
 
@@ -113,6 +113,25 @@ const createSystemNodes = (kind: TopicKind): StateNode[] => {
       systemNodeType: 'TopicStart',
     },
   ];
+};
+
+const normalizeTopicEndMarkers = (projects: DiagramProject[]) => {
+  projects.forEach((project) => {
+    project.topics.forEach((topicData) => {
+      topicData.states.forEach((state) => {
+        const hasTopicEndKind = Object.prototype.hasOwnProperty.call(state, 'topicEndKind');
+        if (hasTopicEndKind && state.topicEndKind == null) {
+          state.topicEndKind = 'positive';
+        }
+        if (Object.prototype.hasOwnProperty.call(state, 'isTopicEnd')) {
+          if ((state as { isTopicEnd?: boolean }).isTopicEnd) {
+            state.topicEndKind = state.topicEndKind ?? 'positive';
+          }
+          delete (state as { isTopicEnd?: boolean }).isTopicEnd;
+        }
+      });
+    });
+  });
 };
 
 const createNewProject = (instrument: Partial<Instrument> = {}): DiagramProject => {
@@ -341,7 +360,6 @@ export const useDiagramStore = create<DiagramState>()(
               stereotype: undefined, // No stereotype by default for custom states
               position: position ?? { x: 250, y: 200 },
               isSystemNode: false,
-              isTopicEnd: false,
             };
             topicData.states.push(newState);
             project.updatedAt = new Date().toISOString();
@@ -383,12 +401,12 @@ export const useDiagramStore = create<DiagramState>()(
               ? topicData.states.find(s => s.id === selectedElementId)
               : undefined;
             if (selectedState && !selectedState.isSystemNode) {
-              selectedState.isTopicEnd = true;
+              selectedState.topicEndKind = 'positive';
               project.updatedAt = new Date().toISOString();
               return;
             }
 
-            const hasTopicEndMarker = topicData.states.some(s => s.isTopicEnd);
+            const hasTopicEndMarker = topicData.states.some(s => getTopicEndKind(s));
             const hasTopicEndNode = topicData.states.some(s => s.systemNodeType === 'TopicEnd');
             if (!hasTopicEndMarker && !hasTopicEndNode) {
               const topicEnd: StateNode = {
@@ -431,7 +449,13 @@ export const useDiagramStore = create<DiagramState>()(
           if (topicData) {
             const stateNode = topicData.states.find(s => s.id === stateId);
             if (stateNode && !stateNode.isSystemNode) {
-              Object.assign(stateNode, updates);
+              if ('topicEndKind' in updates && updates.topicEndKind === undefined) {
+                delete stateNode.topicEndKind;
+                const { topicEndKind: _topicEndKind, ...rest } = updates;
+                Object.assign(stateNode, rest);
+              } else {
+                Object.assign(stateNode, updates);
+              }
               project.updatedAt = new Date().toISOString();
             }
           }
@@ -601,12 +625,16 @@ export const useDiagramStore = create<DiagramState>()(
         exportInstrument: () => {
           const state = get();
           const project = state.projects.find(p => p.id === state.activeProjectId);
-          return project ? JSON.stringify(project, null, 2) : '';
+          if (!project) return '';
+          const sanitizedProject = JSON.parse(JSON.stringify(project)) as DiagramProject;
+          normalizeTopicEndMarkers([sanitizedProject]);
+          return JSON.stringify(sanitizedProject, null, 2);
         },
 
         exportProject: () => {
-          const stateForExport = {...get()}
-          stateForExport.viewMode = "topic"
+          const stateForExport = JSON.parse(JSON.stringify(get())) as DiagramState;
+          normalizeTopicEndMarkers(stateForExport.projects);
+          stateForExport.viewMode = "topic";
           stateForExport.activeProjectId = null;
           stateForExport.selectedElementId = null;
           stateForExport.selectedElementType = null;
@@ -616,6 +644,7 @@ export const useDiagramStore = create<DiagramState>()(
         importInstrument: (json) => {
           try {
             const project = JSON.parse(json) as DiagramProject;
+            normalizeTopicEndMarkers([project]);
             // Give it a new ID to avoid conflicts
             project.id = uuidv4();
             project.updatedAt = new Date().toISOString();
@@ -636,6 +665,7 @@ export const useDiagramStore = create<DiagramState>()(
           try {
             const newState = JSON.parse(json) as DiagramState;
             // Give it a new ID to avoid conflicts
+            normalizeTopicEndMarkers(newState.projects);
 
             set((state) => {
               state.projects = newState.projects;
@@ -676,6 +706,7 @@ export const useDiagramStore = create<DiagramState>()(
       onRehydrateStorage: () => (state) => {
         // Fix up any inconsistent state after rehydration
         if (state) {
+          normalizeTopicEndMarkers(state.projects);
           // If activeProjectId points to non-existent project, fix it
           if (state.activeProjectId && !state.projects.some(p => p.id === state.activeProjectId)) {
             state.activeProjectId = state.projects[0]?.id || null;
