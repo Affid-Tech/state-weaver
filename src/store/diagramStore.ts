@@ -473,7 +473,7 @@ export const useDiagramStore = create<DiagramState>()(
               const fromState = topicData.states.find(s => s.id === from);
               const toState = topicData.states.find(s => s.id === to);
               const kind = deriveTransitionKind(fromState, toState);
-              const isRoutingOnly = fromState?.systemNodeType === 'Fork' || toState?.systemNodeType === 'Fork';
+              const isRoutingOnly = toState?.systemNodeType === 'Fork';
               
               topicData.transitions.push({
                 id: transitionId,
@@ -510,7 +510,7 @@ export const useDiagramStore = create<DiagramState>()(
                 const fromState = topicData.states.find(s => s.id === transition.from);
                 const toState = topicData.states.find(s => s.id === transition.to);
                 transition.kind = deriveTransitionKind(fromState, toState);
-                transition.isRoutingOnly = fromState?.systemNodeType === 'Fork' || toState?.systemNodeType === 'Fork';
+                transition.isRoutingOnly = toState?.systemNodeType === 'Fork';
                 if (transition.isRoutingOnly) {
                   transition.messageType = undefined;
                   transition.flowType = undefined;

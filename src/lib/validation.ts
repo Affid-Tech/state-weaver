@@ -1,5 +1,5 @@
 import type { DiagramProject, TopicData, ValidationIssue, Transition } from '@/types/diagram';
-import { labelToEnumId } from '@/types/diagram';
+import { isRoutingOnlyTransition, labelToEnumId } from '@/types/diagram';
 import type { FieldConfig } from '@/types/fieldConfig';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -184,9 +184,7 @@ function validateTopic(topicData: TopicData, instrumentType: string, fieldConfig
   transitions.forEach((transition) => {
     const fromState = states.find(s => s.id === transition.from);
     const toState = states.find(s => s.id === transition.to);
-    const isForkTransition = transition.isRoutingOnly
-      || fromState?.systemNodeType === 'Fork'
-      || toState?.systemNodeType === 'Fork';
+    const isForkTransition = isRoutingOnlyTransition(transition, toState);
 
     if (!fromState) {
       issues.push({

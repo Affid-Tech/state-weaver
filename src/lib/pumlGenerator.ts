@@ -1,5 +1,5 @@
 import type { DiagramProject, TopicData, StateNode, Transition, Instrument, Topic } from '@/types/diagram';
-import { labelToEnumId } from '@/types/diagram';
+import { isRoutingOnlyTransition, labelToEnumId } from '@/types/diagram';
 
 const INLINE_STYLES = `skinparam state {
   BackgroundColor #F8FAFC
@@ -54,12 +54,17 @@ function getStateEnumId(state: StateNode): string {
  * If revision is specified, instrument and topic MUST be included (inherit from parent if not set).
  * If instrument is specified (but no revision), topic must follow.
  */
-function getTransitionLabel(transition: Transition, instrument: Instrument, topic: Topic): string {
+function getTransitionLabel(
+  transition: Transition,
+  instrument: Instrument,
+  topic: Topic,
+  toState?: StateNode
+): string {
   // End transitions have no label
   if (
     transition.kind === 'endTopic'
     || transition.kind === 'endInstrument'
-    || transition.isRoutingOnly
+    || isRoutingOnlyTransition(transition, toState)
     || !transition.messageType
     || !transition.flowType
   ) {
@@ -180,7 +185,7 @@ export function generateTopicPuml(project: DiagramProject, topicId: string): str
       toAlias = `${instrument.type}.${topic.id}.${transition.to}`;
     }
     
-    const label = getTransitionLabel(transition, instrument, topic);
+    const label = getTransitionLabel(transition, instrument, topic, toState);
     if (label) {
       lines.push(`${fromAlias} --> ${toAlias} : ${label}`);
     } else {
@@ -262,7 +267,7 @@ export function generateAggregatePuml(project: DiagramProject): string | null {
           ? 'EndInstrument'
           : `${rootId}.${toState ? getStateEnumId(toState) : transition.to}`;
       
-      const label = getTransitionLabel(transition, instrument, rootTopic.topic);
+      const label = getTransitionLabel(transition, instrument, rootTopic.topic, toState);
       if (label) {
         lines.push(`    ${fromAlias} --> ${toAlias} : ${label}`);
       } else {
@@ -313,7 +318,7 @@ export function generateAggregatePuml(project: DiagramProject): string | null {
           ? 'EndInstrument'
           : `${topicAlias}.${toState ? getStateEnumId(toState) : transition.to}`;
       
-      const label = getTransitionLabel(transition, instrument, topicData.topic);
+      const label = getTransitionLabel(transition, instrument, topicData.topic, toState);
       if (label) {
         lines.push(`    ${fromAlias} --> ${toAlias} : ${label}`);
       } else {
@@ -365,7 +370,7 @@ export function generateAggregatePuml(project: DiagramProject): string | null {
         ? `${rootId}.End`
         : `${rootId}.${toState ? getStateEnumId(toState) : startTransition.to}`;
       
-      const label = getTransitionLabel(startTransition, instrument, rootTopic.topic);
+      const label = getTransitionLabel(startTransition, instrument, rootTopic.topic, toState);
       if (label) {
         lines.push(`NewInstrument --> ${toAlias} : ${label}`);
       } else {
