@@ -157,6 +157,27 @@ function validateTopic(topicData: TopicData, instrumentType: string, fieldConfig
         }
       }
     }
+    if (Object.prototype.hasOwnProperty.call(state, 'topicEndKind')) {
+      if (!state.topicEndKind) {
+        issues.push({
+          id: uuidv4(),
+          level: 'error',
+          message: 'Topic end markers must specify a topic end kind',
+          topicId: topic.id,
+          elementId: state.id,
+          elementType: 'state',
+        });
+      } else if (!['positive', 'negative'].includes(state.topicEndKind)) {
+        issues.push({
+          id: uuidv4(),
+          level: 'error',
+          message: `Topic end kind "${state.topicEndKind}" must be "positive" or "negative"`,
+          topicId: topic.id,
+          elementId: state.id,
+          elementType: 'state',
+        });
+      }
+    }
   });
 
   // Check for required start transitions
@@ -274,17 +295,19 @@ function validateTopic(topicData: TopicData, instrumentType: string, fieldConfig
       if (!transition.endTopicKind) {
         issues.push({
           id: uuidv4(),
-          level: 'error',
-          message: 'End topic transitions must specify an end topic kind',
+          level: 'warning',
+          message: 'End topic transition is missing end topic kind; defaulting to "positive"',
           topicId: topic.id,
           elementId: transition.id,
           elementType: 'transition',
         });
-      } else if (!['positive', 'negative'].includes(transition.endTopicKind)) {
+      }
+      const endTopicKind = transition.endTopicKind ?? 'positive';
+      if (!['positive', 'negative'].includes(endTopicKind)) {
         issues.push({
           id: uuidv4(),
           level: 'error',
-          message: `End topic kind "${transition.endTopicKind}" must be "positive" or "negative"`,
+          message: `End topic kind "${endTopicKind}" must be "positive" or "negative"`,
           topicId: topic.id,
           elementId: transition.id,
           elementType: 'transition',
