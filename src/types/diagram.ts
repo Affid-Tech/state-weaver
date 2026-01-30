@@ -125,7 +125,7 @@ export function deriveTransitionKind(
   }
   
   // Ending at TopicEnd
-  if (toState.systemNodeType === 'TopicEnd' || toState.isTopicEnd) {
+  if (toState.systemNodeType === 'TopicEnd') {
     return 'endTopic';
   }
   

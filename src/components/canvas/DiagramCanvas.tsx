@@ -302,12 +302,11 @@ function DiagramCanvasInner() {
     (params: Connection) => {
       if (!project?.selectedTopicId || !params.source || !params.target || !selectedTopicData) return;
       
-      // Check if target is an end node (TopicEnd, InstrumentEnd, or marked end-topic)
+      // Check if target is an end node (TopicEnd or InstrumentEnd)
       const targetState = selectedTopicData.states.find(s => s.id === params.target);
       const sourceState = selectedTopicData.states.find(s => s.id === params.source);
       const isEndNode = targetState?.systemNodeType === 'TopicEnd'
-        || targetState?.systemNodeType === 'InstrumentEnd'
-        || targetState?.isTopicEnd;
+        || targetState?.systemNodeType === 'InstrumentEnd';
       const isTargetFork = targetState?.systemNodeType === 'Fork';
       const isSourceFork = sourceState?.systemNodeType === 'Fork';
       
