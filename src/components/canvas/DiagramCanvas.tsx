@@ -347,11 +347,8 @@ function DiagramCanvasInner() {
     (params: Connection) => {
       if (!project?.selectedTopicId || !params.source || !params.target || !selectedTopicData) return;
       
-      // Check if target is an end node (TopicEnd or InstrumentEnd)
       const targetState = selectedTopicData.states.find(s => s.id === params.target);
       const sourceState = selectedTopicData.states.find(s => s.id === params.source);
-      const isEndNode = targetState?.systemNodeType === 'TopicEnd'
-        || targetState?.systemNodeType === 'InstrumentEnd';
       const isTargetFork = targetState?.systemNodeType === 'Fork';
       const isSourceFork = sourceState?.systemNodeType === 'Fork';
       
@@ -365,23 +362,6 @@ function DiagramCanvasInner() {
           undefined,
           params.sourceHandle || 'source-bottom',
           params.targetHandle || 'target-top'
-        );
-        selectElement(transitionId, 'transition');
-      } else if (isEndNode) {
-        // Auto-create transition without dialog - end transitions have no properties
-        const endTopicKind = targetState?.systemNodeType === 'TopicEnd' ? 'positive' : undefined;
-        const transitionId = addTransition(
-          project.selectedTopicId,
-          params.source,
-          params.target,
-          '', // Empty messageType for end transitions
-          'B2B', // Default flowType (not used for end transitions)
-          params.sourceHandle || 'source-bottom',
-          params.targetHandle || 'target-top',
-          undefined,
-          undefined,
-          undefined,
-          endTopicKind
         );
         selectElement(transitionId, 'transition');
       } else if (isSourceFork) {
