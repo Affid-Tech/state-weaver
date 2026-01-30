@@ -101,14 +101,6 @@ const createSystemNodes = (kind: TopicKind): StateNode[] => {
         isSystemNode: true,
         systemNodeType: 'NewInstrument',
       },
-      {
-        id: 'TopicEnd',
-        label: 'Topic End',
-        stereotype: 'End',
-        position: { x: 400, y: 300 },
-        isSystemNode: true,
-        systemNodeType: 'TopicEnd',
-      },
     ];
   }
   return [
@@ -119,14 +111,6 @@ const createSystemNodes = (kind: TopicKind): StateNode[] => {
       position: { x: 100, y: 100 },
       isSystemNode: true,
       systemNodeType: 'TopicStart',
-    },
-    {
-      id: 'TopicEnd',
-      label: 'Topic End',
-      stereotype: 'End',
-      position: { x: 400, y: 300 },
-      isSystemNode: true,
-      systemNodeType: 'TopicEnd',
     },
   ];
 };
@@ -357,6 +341,7 @@ export const useDiagramStore = create<DiagramState>()(
               stereotype: undefined, // No stereotype by default for custom states
               position: position ?? { x: 250, y: 200 },
               isSystemNode: false,
+              isTopicEnd: false,
             };
             topicData.states.push(newState);
             project.updatedAt = new Date().toISOString();
@@ -385,14 +370,33 @@ export const useDiagramStore = create<DiagramState>()(
           }
         }),
 
-        addTopicEnd: (topicId) => set((state) => {
-          const project = state.projects.find(p => p.id === state.activeProjectId);
-          if (!project) return;
-          
-          const topicData = project.topics.find(t => t.topic.id === topicId);
-          if (topicData) {
-            const exists = topicData.states.some(s => s.systemNodeType === 'TopicEnd');
-            if (!exists) {
+        addTopicEnd: (topicId) => {
+          const { selectedElementId, selectedElementType } = get();
+          set((state) => {
+            const project = state.projects.find(p => p.id === state.activeProjectId);
+            if (!project) return;
+            
+            const topicData = project.topics.find(t => t.topic.id === topicId);
+            if (!topicData) return;
+            
+            const selectedState = selectedElementType === 'state'
+              ? topicData.states.find(s => s.id === selectedElementId)
+              : undefined;
+            if (selectedState && !selectedState.isSystemNode) {
+              selectedState.isTopicEnd = true;
+              topicData.transitions.forEach((transition) => {
+                if (transition.to === selectedState.id) {
+                  const fromState = topicData.states.find(s => s.id === transition.from);
+                  transition.kind = deriveTransitionKind(fromState, selectedState);
+                }
+              });
+              project.updatedAt = new Date().toISOString();
+              return;
+            }
+
+            const hasTopicEndMarker = topicData.states.some(s => s.isTopicEnd);
+            const hasTopicEndNode = topicData.states.some(s => s.systemNodeType === 'TopicEnd');
+            if (!hasTopicEndMarker && !hasTopicEndNode) {
               const topicEnd: StateNode = {
                 id: 'TopicEnd',
                 label: 'Topic End',
@@ -404,8 +408,8 @@ export const useDiagramStore = create<DiagramState>()(
               topicData.states.push(topicEnd);
               project.updatedAt = new Date().toISOString();
             }
-          }
-        }),
+          });
+        },
 
         addFork: (topicId, position) => set((state) => {
           const project = state.projects.find(p => p.id === state.activeProjectId);
@@ -434,6 +438,14 @@ export const useDiagramStore = create<DiagramState>()(
             const stateNode = topicData.states.find(s => s.id === stateId);
             if (stateNode && !stateNode.isSystemNode) {
               Object.assign(stateNode, updates);
+              if (updates.isTopicEnd !== undefined) {
+                topicData.transitions.forEach((transition) => {
+                  if (transition.to === stateNode.id) {
+                    const fromState = topicData.states.find(s => s.id === transition.from);
+                    transition.kind = deriveTransitionKind(fromState, stateNode);
+                  }
+                });
+              }
               project.updatedAt = new Date().toISOString();
             }
           }

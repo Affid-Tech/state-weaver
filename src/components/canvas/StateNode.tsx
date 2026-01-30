@@ -42,11 +42,16 @@ export const StateNodeComponent = memo(({ data, id }: StateNodeProps) => {
           return 'bg-state text-state-foreground border-state-border';
       }
     }
+    if (state.isTopicEnd) {
+      return 'bg-state-end text-state-end-foreground border-state-end-border';
+    }
     return 'bg-state text-state-foreground border-state-border';
   };
 
   const isStart = state.systemNodeType === 'TopicStart' || state.systemNodeType === 'NewInstrument';
-  const isEnd = state.systemNodeType === 'TopicEnd' || state.systemNodeType === 'InstrumentEnd';
+  const isEnd = state.systemNodeType === 'TopicEnd'
+    || state.systemNodeType === 'InstrumentEnd'
+    || state.isTopicEnd;
   const isFork = state.systemNodeType === 'Fork';
 
   // Show handles on hover, selection, or during connection

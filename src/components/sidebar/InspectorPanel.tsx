@@ -95,7 +95,7 @@ export function InspectorPanel() {
 
   const hasTopicEnd = useMemo(() => {
     if (!selectedTopicData) return false;
-    return selectedTopicData.states.some(s => s.systemNodeType === 'TopicEnd');
+    return selectedTopicData.states.some(s => s.systemNodeType === 'TopicEnd' || s.isTopicEnd);
   }, [selectedTopicData]);
 
   const selfLoopTransitions = useMemo(() => {
@@ -308,6 +308,21 @@ export function InspectorPanel() {
                       placeholder="Stereotype for styling"
                     />
                   </div>
+
+                  {!selectedState.isSystemNode && (
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="state-topic-end"
+                        checked={Boolean(selectedState.isTopicEnd)}
+                        onCheckedChange={(checked) => {
+                          if (project.selectedTopicId) {
+                            updateState(project.selectedTopicId, selectedState.id, { isTopicEnd: checked === true });
+                          }
+                        }}
+                      />
+                      <Label htmlFor="state-topic-end">Mark as Topic End</Label>
+                    </div>
+                  )}
 
                   {selectedState.isSystemNode && !canDeleteSelectedState && (
                     <p className="text-sm text-muted-foreground">

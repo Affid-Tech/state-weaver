@@ -85,6 +85,8 @@ export function validateProject(project: DiagramProject, fieldConfig?: FieldConf
 function validateTopic(topicData: TopicData, instrumentType: string, fieldConfig?: FieldConfig): ValidationIssue[] {
   const issues: ValidationIssue[] = [];
   const { topic, states, transitions } = topicData;
+  const isTopicEndState = (state: { systemNodeType?: string; isTopicEnd?: boolean } | undefined) =>
+    state?.systemNodeType === 'TopicEnd' || state?.isTopicEnd;
 
   // Validate topic ID
   if (!topic.id || topic.id.trim() === '') {
@@ -182,10 +184,11 @@ function validateTopic(topicData: TopicData, instrumentType: string, fieldConfig
     });
   }
 
-  // Check for path to TopicEnd (simplified check - at least one transition to TopicEnd)
+  // Check for path to an end-topic state (simplified check - at least one transition to end topic)
   const hasEndTransition = transitions.some(
     t => {
-      if (t.to !== 'TopicEnd') return false;
+      const targetState = states.find(s => s.id === t.to);
+      if (!isTopicEndState(targetState)) return false;
       const sourceState = states.find(s => s.id === t.from);
       if (sourceState?.systemNodeType !== 'Fork') {
         return true;
@@ -201,7 +204,7 @@ function validateTopic(topicData: TopicData, instrumentType: string, fieldConfig
     issues.push({
       id: uuidv4(),
       level: 'warning',
-      message: `Topic "${topic.id}" should have at least one path to TopicEnd`,
+      message: `Topic "${topic.id}" should have at least one path to an end-topic state`,
       topicId: topic.id,
     });
   }
@@ -257,11 +260,11 @@ function validateTopic(topicData: TopicData, instrumentType: string, fieldConfig
       });
     }
 
-    if (transition.kind === 'endTopic' && transition.to !== 'TopicEnd') {
+    if (transition.kind === 'endTopic' && !isTopicEndState(toState)) {
       issues.push({
         id: uuidv4(),
         level: 'error',
-        message: `endTopic transition must end at TopicEnd`,
+        message: `endTopic transition must end at a TopicEnd or marked end-topic state`,
         topicId: topic.id,
         elementId: transition.id,
         elementType: 'transition',
