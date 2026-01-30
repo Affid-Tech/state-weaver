@@ -148,7 +148,6 @@ function DiagramCanvasInner() {
     if (!selectedTopicData) return [];
     const selfLoopLookup = new Map<string, boolean>();
     selectedTopicData.transitions.forEach((transition) => {
-      if (transitionVisibility[transition.id] === false) return;
       if (transition.from === transition.to) {
         selfLoopLookup.set(transition.from, true);
       }
