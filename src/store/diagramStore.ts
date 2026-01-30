@@ -58,7 +58,7 @@ export interface DiagramState {
   updateStatePosition: (topicId: string, stateId: string, position: Position) => void;
   
   // Transition actions
-  addTransition: (topicId: string, from: string, to: string, messageType: string, flowType: FlowType, sourceHandleId?: string, targetHandleId?: string, revision?: string, instrument?: string, topic?: string) => string;
+  addTransition: (topicId: string, from: string, to: string, messageType?: string, flowType?: FlowType, sourceHandleId?: string, targetHandleId?: string, revision?: string, instrument?: string, topic?: string) => string;
   updateTransition: (topicId: string, transitionId: string, updates: Partial<Omit<Transition, 'kind'>>) => void;
   deleteTransition: (topicId: string, transitionId: string) => void;
   updateTransitionRouting: (topicId: string, transitionId: string, sourceHandleId?: string, targetHandleId?: string, curveOffset?: number) => void;
@@ -473,14 +473,16 @@ export const useDiagramStore = create<DiagramState>()(
               const fromState = topicData.states.find(s => s.id === from);
               const toState = topicData.states.find(s => s.id === to);
               const kind = deriveTransitionKind(fromState, toState);
+              const isRoutingOnly = fromState?.systemNodeType === 'Fork' || toState?.systemNodeType === 'Fork';
               
               topicData.transitions.push({
                 id: transitionId,
                 from,
                 to,
                 kind,
-                messageType,
-                flowType,
+                isRoutingOnly,
+                messageType: isRoutingOnly ? undefined : messageType,
+                flowType: isRoutingOnly ? undefined : flowType,
                 sourceHandleId,
                 targetHandleId,
                 revision,
@@ -508,6 +510,11 @@ export const useDiagramStore = create<DiagramState>()(
                 const fromState = topicData.states.find(s => s.id === transition.from);
                 const toState = topicData.states.find(s => s.id === transition.to);
                 transition.kind = deriveTransitionKind(fromState, toState);
+                transition.isRoutingOnly = fromState?.systemNodeType === 'Fork' || toState?.systemNodeType === 'Fork';
+                if (transition.isRoutingOnly) {
+                  transition.messageType = undefined;
+                  transition.flowType = undefined;
+                }
               }
               project.updatedAt = new Date().toISOString();
             }

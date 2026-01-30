@@ -241,9 +241,23 @@ function DiagramCanvasInner() {
       
       // Check if target is an end node (TopicEnd or InstrumentEnd)
       const targetState = selectedTopicData.states.find(s => s.id === params.target);
+      const sourceState = selectedTopicData.states.find(s => s.id === params.source);
       const isEndNode = targetState?.systemNodeType === 'TopicEnd' || targetState?.systemNodeType === 'InstrumentEnd';
+      const isForkTransition = sourceState?.systemNodeType === 'Fork' || targetState?.systemNodeType === 'Fork';
       
-      if (isEndNode) {
+      if (isForkTransition) {
+        // Auto-create transition without dialog - fork transitions are routing-only
+        const transitionId = addTransition(
+          project.selectedTopicId,
+          params.source,
+          params.target,
+          undefined,
+          undefined,
+          params.sourceHandle || 'source-bottom',
+          params.targetHandle || 'target-top'
+        );
+        selectElement(transitionId, 'transition');
+      } else if (isEndNode) {
         // Auto-create transition without dialog - end transitions have no properties
         const transitionId = addTransition(
           project.selectedTopicId,

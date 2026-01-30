@@ -40,6 +40,14 @@ function getTransitionLabel(transition: Transition): string {
   if (transition.kind === 'endTopic' || transition.kind === 'endInstrument') {
     return '';
   }
+
+  if (transition.isRoutingOnly) {
+    return '';
+  }
+
+  if (!transition.messageType || !transition.flowType) {
+    return '';
+  }
   
   const parts: string[] = [];
   if (transition.revision) parts.push(transition.revision);
@@ -283,7 +291,7 @@ export const TransitionEdge = memo(({
   
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState(manualCurveOffset);
-  const { screenToFlowPosition } = useReactFlow();
+  const { screenToFlowPosition, getNode } = useReactFlow();
   
   // Sync dragOffset with stored value when not dragging
   useEffect(() => {
@@ -310,7 +318,12 @@ export const TransitionEdge = memo(({
     targetHandleId
   );
 
-  const label = transition ? getTransitionLabel(transition) : '';
+  const sourceNode = getNode(source);
+  const targetNode = getNode(target);
+  const isForkTransition = transition?.isRoutingOnly
+    || sourceNode?.data?.state?.systemNodeType === 'Fork'
+    || targetNode?.data?.state?.systemNodeType === 'Fork';
+  const label = transition && !isForkTransition ? getTransitionLabel(transition) : '';
   const isEndTrans = transition ? isEndTransition(transition.kind) : false;
 
   const handleClick = (e: React.MouseEvent) => {

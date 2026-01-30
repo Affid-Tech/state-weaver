@@ -56,7 +56,13 @@ function getStateEnumId(state: StateNode): string {
  */
 function getTransitionLabel(transition: Transition, instrument: Instrument, topic: Topic): string {
   // End transitions have no label
-  if (transition.kind === 'endTopic' || transition.kind === 'endInstrument') {
+  if (
+    transition.kind === 'endTopic'
+    || transition.kind === 'endInstrument'
+    || transition.isRoutingOnly
+    || !transition.messageType
+    || !transition.flowType
+  ) {
     return '';
   }
   
