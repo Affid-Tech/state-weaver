@@ -1,6 +1,6 @@
 import { memo, useCallback, useState } from 'react';
 import { Handle, Position } from '@xyflow/react';
-import { Lock } from 'lucide-react';
+import { Lock, Repeat } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { StateNode } from '@/types/diagram';
 
@@ -8,6 +8,7 @@ interface StateNodeData {
   state: StateNode;
   isSelected: boolean;
   isConnecting?: boolean;
+  hasSelfLoops?: boolean;
   onSelect: (id: string) => void;
 }
 
@@ -17,7 +18,7 @@ interface StateNodeProps {
 }
 
 export const StateNodeComponent = memo(({ data, id }: StateNodeProps) => {
-  const { state, isSelected, isConnecting, onSelect } = data;
+  const { state, isSelected, isConnecting, onSelect, hasSelfLoops } = data;
   const [isHovered, setIsHovered] = useState(false);
 
   const handleClick = useCallback(() => {
@@ -173,6 +174,12 @@ export const StateNodeComponent = memo(({ data, id }: StateNodeProps) => {
           <span className="font-medium text-sm">
             {state.label || state.id}
           </span>
+        </div>
+      )}
+
+      {!isFork && hasSelfLoops && (
+        <div className="absolute top-1 right-1 rounded-full bg-background/80 p-0.5 text-muted-foreground pointer-events-none">
+          <Repeat className="h-3 w-3" />
         </div>
       )}
       
