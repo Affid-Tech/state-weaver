@@ -186,8 +186,8 @@ function DiagramCanvasInner() {
 
     if (distance < 1) {
       return {
-        out: { x: midX - separation / 2, y: midY - offset },
-        in: { x: midX + separation / 2, y: midY + offset },
+        in: { x: midX - separation / 2, y: midY - offset },
+        out: { x: midX + separation / 2, y: midY + offset },
       };
     }
 
@@ -197,11 +197,11 @@ function DiagramCanvasInner() {
     const perpY = ux;
 
     return {
-      out: {
+      in: {
         x: midX - ux * separation / 2 + perpX * offset,
         y: midY - uy * separation / 2 + perpY * offset,
       },
-      in: {
+      out: {
         x: midX + ux * separation / 2 + perpX * offset,
         y: midY + uy * separation / 2 + perpY * offset,
       },
