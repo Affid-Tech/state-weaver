@@ -153,18 +153,20 @@ function DiagramCanvasInner() {
         selfLoopLookup.set(transition.from, true);
       }
     });
-    return selectedTopicData.states.map((state) => ({
-      id: state.id,
-      type: 'stateNode',
-      position: state.position,
-      data: {
-        state,
-        isSelected: selectedElementId === state.id && selectedElementType === 'state',
-        isConnecting,
-        hasSelfLoops: selfLoopLookup.get(state.id) ?? false,
-        onSelect: handleNodeSelect,
-      },
-    }));
+    return selectedTopicData.states
+      .filter((state) => state.systemNodeType !== 'TopicEnd' && state.systemNodeType !== 'InstrumentEnd')
+      .map((state) => ({
+        id: state.id,
+        type: 'stateNode',
+        position: state.position,
+        data: {
+          state,
+          isSelected: selectedElementId === state.id && selectedElementType === 'state',
+          isConnecting,
+          hasSelfLoops: selfLoopLookup.get(state.id) ?? false,
+          onSelect: handleNodeSelect,
+        },
+      }));
   }, [selectedTopicData, selectedElementId, selectedElementType, handleNodeSelect, isConnecting, transitionVisibility]);
 
   // Compute edge indices for proper offset rendering
