@@ -26,6 +26,7 @@ export interface DiagramState {
   selectedElementId: string | null;
   selectedElementType: 'state' | 'transition' | null;
   viewMode: 'topic' | 'aggregate';
+  transitionVisibility: Record<string, boolean>;
   
   // Global field config (shared across all projects)
   fieldConfig: FieldConfig;
@@ -62,6 +63,8 @@ export interface DiagramState {
   updateTransition: (topicId: string, transitionId: string, updates: Partial<Omit<Transition, 'kind'>>) => void;
   deleteTransition: (topicId: string, transitionId: string) => void;
   updateTransitionRouting: (topicId: string, transitionId: string, sourceHandleId?: string, targetHandleId?: string, curveOffset?: number) => void;
+  setTransitionVisibility: (transitionId: string, isVisible: boolean) => void;
+  setTransitionsVisibility: (transitionIds: string[], isVisible: boolean) => void;
   
   // Selection
   selectElement: (elementId: string | null, elementType: 'state' | 'transition' | null) => void;
@@ -154,6 +157,7 @@ export const useDiagramStore = create<DiagramState>()(
         selectedElementId: null,
         selectedElementType: null,
         viewMode: 'topic',
+        transitionVisibility: {},
         fieldConfig: DEFAULT_FIELD_CONFIG,
 
         getActiveProject: () => {
@@ -439,10 +443,16 @@ export const useDiagramStore = create<DiagramState>()(
           if (topicData) {
             const stateNode = topicData.states.find(s => s.id === stateId);
             if (stateNode && (!stateNode.isSystemNode || stateNode.systemNodeType === 'Fork')) {
+              const removedTransitionIds = topicData.transitions
+                .filter(t => t.from === stateId || t.to === stateId)
+                .map(t => t.id);
               topicData.states = topicData.states.filter(s => s.id !== stateId);
               topicData.transitions = topicData.transitions.filter(
                 t => t.from !== stateId && t.to !== stateId
               );
+              removedTransitionIds.forEach((transitionId) => {
+                delete state.transitionVisibility[transitionId];
+              });
               project.updatedAt = new Date().toISOString();
             }
           }
@@ -489,6 +499,7 @@ export const useDiagramStore = create<DiagramState>()(
                 instrument,
                 topic,
               });
+              state.transitionVisibility[transitionId] = true;
               project.updatedAt = new Date().toISOString();
             }
           });
@@ -528,6 +539,7 @@ export const useDiagramStore = create<DiagramState>()(
           const topicData = project.topics.find(t => t.topic.id === topicId);
           if (topicData) {
             topicData.transitions = topicData.transitions.filter(t => t.id !== transitionId);
+            delete state.transitionVisibility[transitionId];
             project.updatedAt = new Date().toISOString();
           }
         }),
@@ -546,6 +558,16 @@ export const useDiagramStore = create<DiagramState>()(
               project.updatedAt = new Date().toISOString();
             }
           }
+        }),
+
+        setTransitionVisibility: (transitionId, isVisible) => set((state) => {
+          state.transitionVisibility[transitionId] = isVisible;
+        }),
+
+        setTransitionsVisibility: (transitionIds, isVisible) => set((state) => {
+          transitionIds.forEach((transitionId) => {
+            state.transitionVisibility[transitionId] = isVisible;
+          });
         }),
         
         selectElement: (elementId, elementType) => set((state) => {

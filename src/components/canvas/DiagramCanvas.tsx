@@ -106,6 +106,7 @@ function DiagramCanvasInner() {
   const addState = useDiagramStore(s => s.addState);
   const addFork = useDiagramStore(s => s.addFork);
   const fieldConfig = useDiagramStore(s => s.fieldConfig);
+  const transitionVisibility = useDiagramStore(s => s.transitionVisibility);
 
   const [pendingConnection, setPendingConnection] = useState<PendingConnection | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
@@ -166,7 +167,9 @@ function DiagramCanvasInner() {
 
   const initialEdges: Edge[] = useMemo(() => {
     if (!selectedTopicData) return [];
-    return selectedTopicData.transitions.map((transition) => {
+    return selectedTopicData.transitions
+      .filter((transition) => transitionVisibility[transition.id] !== false)
+      .map((transition) => {
       const indexInfo = edgeIndices.get(transition.id) ?? { index: 0, total: 1 };
       const sourceHandle = transition.sourceHandleId || 'source-bottom';
       const targetHandle = transition.targetHandleId || 'target-top';
@@ -195,7 +198,7 @@ function DiagramCanvasInner() {
         },
       };
     });
-  }, [selectedTopicData, selectedElementId, selectedElementType, handleEdgeSelect, edgeIndices, project?.selectedTopicId, updateTransitionRouting]);
+  }, [selectedTopicData, selectedElementId, selectedElementType, handleEdgeSelect, edgeIndices, project?.selectedTopicId, transitionVisibility, updateTransitionRouting]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);

@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Slider } from '@/components/ui/slider';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Select,
   SelectContent,
@@ -27,7 +28,7 @@ import { Combobox } from '@/components/ui/combobox';
 import { useDiagramStore } from '@/store/diagramStore';
 import { validateProject } from '@/lib/validation';
 import { cn } from '@/lib/utils';
-import type { FlowType } from '@/types/diagram';
+import type { FlowType, Transition } from '@/types/diagram';
 
 const DEFAULT_FLOW_TYPES: FlowType[] = ['B2B', 'B2C', 'C2B', 'C2C'];
 const HANDLE_SIDES = [
@@ -56,6 +57,9 @@ export function InspectorPanel() {
   const deleteTransition = useDiagramStore(s => s.deleteTransition);
   const selectElement = useDiagramStore(s => s.selectElement);
   const selectTopic = useDiagramStore(s => s.selectTopic);
+  const transitionVisibility = useDiagramStore(s => s.transitionVisibility);
+  const setTransitionVisibility = useDiagramStore(s => s.setTransitionVisibility);
+  const setTransitionsVisibility = useDiagramStore(s => s.setTransitionsVisibility);
 
   // Derive available options from fieldConfig with fallbacks
   const revisionOptions = fieldConfig.revisions;
@@ -93,6 +97,23 @@ export function InspectorPanel() {
     if (!selectedTopicData) return false;
     return selectedTopicData.states.some(s => s.systemNodeType === 'TopicEnd');
   }, [selectedTopicData]);
+
+  const selfLoopTransitions = useMemo(() => {
+    if (!selectedTopicData || !selectedState) return [];
+    return selectedTopicData.transitions.filter(
+      transition => transition.from === selectedState.id && transition.to === selectedState.id
+    );
+  }, [selectedTopicData, selectedState]);
+
+  const getTransitionMessageLabel = (transition: Transition) => {
+    const parts: string[] = [];
+    if (transition.revision) parts.push(transition.revision);
+    if (transition.instrument) parts.push(transition.instrument);
+    if (transition.topic) parts.push(transition.topic);
+    if (transition.messageType) parts.push(transition.messageType);
+    if (transition.flowType) parts.push(transition.flowType);
+    return parts.length > 0 ? parts.join(' / ') : 'No message properties';
+  };
 
   // Check if the selected state can be deleted (for system nodes, only if the other end exists)
   const canDeleteSelectedState = useMemo(() => {
@@ -292,6 +313,55 @@ export function InspectorPanel() {
                     <p className="text-sm text-muted-foreground">
                       System nodes cannot be edited or deleted.
                     </p>
+                  )}
+
+                  {selfLoopTransitions.length > 0 && (
+                    <div className="border-t pt-4 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-sm font-medium text-muted-foreground">Self-loop transitions</h4>
+                        <div className="flex gap-2">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => setTransitionsVisibility(selfLoopTransitions.map(t => t.id), true)}
+                          >
+                            Show all
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => setTransitionsVisibility(selfLoopTransitions.map(t => t.id), false)}
+                          >
+                            Hide all
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        {selfLoopTransitions.map((transition) => {
+                          const isVisible = transitionVisibility[transition.id] !== false;
+                          const label = getTransitionMessageLabel(transition);
+                          return (
+                            <div key={transition.id} className="flex items-start gap-2">
+                              <Checkbox
+                                checked={isVisible}
+                                onCheckedChange={(checked) => {
+                                  setTransitionVisibility(transition.id, checked === true);
+                                }}
+                                aria-label={`${label} visibility`}
+                              />
+                              <div className="flex flex-col">
+                                <span className="text-sm">{label}</span>
+                                <span className="text-xs text-muted-foreground">
+                                  {isVisible ? 'Visible' : 'Hidden'}
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
                   )}
                 </div>
               )}
