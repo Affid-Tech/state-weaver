@@ -118,6 +118,18 @@ function DiagramCanvasInner() {
     return project.topics.find(t => t.topic.id === project.selectedTopicId) ?? null;
   }, [project?.selectedTopicId, project?.topics]);
 
+  const pendingSourceLabel = useMemo(() => {
+    if (!pendingConnection) return '';
+    if (!selectedTopicData) return pendingConnection.source;
+    return selectedTopicData.states.find(state => state.id === pendingConnection.source)?.label ?? pendingConnection.source;
+  }, [pendingConnection, selectedTopicData]);
+
+  const pendingTargetLabel = useMemo(() => {
+    if (!pendingConnection) return '';
+    if (!selectedTopicData) return pendingConnection.target;
+    return selectedTopicData.states.find(state => state.id === pendingConnection.target)?.label ?? pendingConnection.target;
+  }, [pendingConnection, selectedTopicData]);
+
   const handleNodeSelect = useCallback((nodeId: string) => {
     selectElement(nodeId, 'state');
   }, [selectElement]);
@@ -497,8 +509,8 @@ function DiagramCanvasInner() {
       <NewTransitionDialog
         open={pendingConnection !== null}
         onOpenChange={(open) => !open && handleCancelTransition()}
-        source={pendingConnection?.source ?? ''}
-        target={pendingConnection?.target ?? ''}
+        source={pendingSourceLabel}
+        target={pendingTargetLabel}
         onConfirm={handleCreateTransition}
       />
 
