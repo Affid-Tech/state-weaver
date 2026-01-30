@@ -342,19 +342,37 @@ export function InspectorPanel() {
                         {selfLoopTransitions.map((transition) => {
                           const isVisible = transitionVisibility[transition.id] !== false;
                           const label = getTransitionMessageLabel(transition);
+                          const checkboxId = `self-loop-${transition.id}`;
+                          const helpTextId = `${checkboxId}-help`;
                           return (
-                            <div key={transition.id} className="flex items-start gap-2">
+                            <div
+                              key={transition.id}
+                              className={cn(
+                                'flex items-start gap-2 rounded-md p-2 transition-colors',
+                                isVisible ? 'bg-transparent' : 'bg-muted/40'
+                              )}
+                            >
                               <Checkbox
+                                id={checkboxId}
                                 checked={isVisible}
                                 onCheckedChange={(checked) => {
                                   setTransitionVisibility(transition.id, checked === true);
                                 }}
-                                aria-label={`${label} visibility`}
+                                aria-describedby={helpTextId}
                               />
                               <div className="flex flex-col">
-                                <span className="text-sm">{label}</span>
-                                <span className="text-xs text-muted-foreground">
-                                  {isVisible ? 'Visible' : 'Hidden'}
+                                <Label
+                                  htmlFor={checkboxId}
+                                  className={cn(
+                                    'text-sm',
+                                    isVisible ? 'text-foreground' : 'text-muted-foreground line-through'
+                                  )}
+                                  title={label}
+                                >
+                                  {label}
+                                </Label>
+                                <span id={helpTextId} className="text-xs text-muted-foreground">
+                                  {isVisible ? 'Visible on canvas' : 'Hidden on canvas'}
                                 </span>
                               </div>
                             </div>

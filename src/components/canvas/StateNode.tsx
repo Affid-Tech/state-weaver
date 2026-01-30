@@ -178,7 +178,12 @@ export const StateNodeComponent = memo(({ data, id }: StateNodeProps) => {
       )}
 
       {!isFork && hasSelfLoops && (
-        <div className="absolute top-1 right-1 rounded-full bg-background/80 p-0.5 text-muted-foreground pointer-events-none">
+        <div
+          className="absolute top-1 right-1 rounded-full bg-background/80 p-0.5 text-muted-foreground"
+          role="img"
+          aria-label="Has self-loop transitions"
+          title="Has self-loop transitions"
+        >
           <Repeat className="h-3 w-3" />
         </div>
       )}
