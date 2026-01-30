@@ -64,7 +64,7 @@ export const StateNodeComponent = memo(({ data, id }: StateNodeProps) => {
       onMouseLeave={() => setIsHovered(false)}
       className={cn(
         'border-2 shadow-sm cursor-pointer transition-all relative flex items-center justify-center',
-        isFork ? 'h-10 w-10 rounded-full' : 'px-4 py-3 rounded-lg min-w-[120px] text-center',
+        isFork ? 'h-6 w-6 rotate-45' : 'px-4 py-3 rounded-lg min-w-[120px] text-center',
         getNodeStyle(),
         isSelected && 'ring-2 ring-state-selected-ring ring-offset-2 ring-offset-background'
       )}
@@ -99,19 +99,15 @@ export const StateNodeComponent = memo(({ data, id }: StateNodeProps) => {
         </>
       )}
       
-      <div className={cn('flex items-center justify-center gap-2', isFork && 'sr-only')}>
-        {state.isSystemNode && (
-          <Lock className="w-3 h-3 opacity-70" />
-        )}
-        <span className="font-medium text-sm">
-          {state.label || state.id}
-        </span>
-      </div>
-
-      {isFork && (
-        <span className="absolute -bottom-5 left-1/2 -translate-x-1/2 text-[10px] text-muted-foreground">
-          {state.label || state.id}
-        </span>
+      {!isFork && (
+        <div className="flex items-center justify-center gap-2">
+          {state.isSystemNode && (
+            <Lock className="w-3 h-3 opacity-70" />
+          )}
+          <span className="font-medium text-sm">
+            {state.label || state.id}
+          </span>
+        </div>
       )}
       
       {state.stereotype && state.stereotype !== state.id && (
