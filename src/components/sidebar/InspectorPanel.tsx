@@ -310,20 +310,36 @@ export function InspectorPanel() {
                     />
                   </div>
 
-                  {!selectedState.isSystemNode && (
-                    <div className="flex items-center space-x-2">
-                      <Checkbox
-                        id="state-topic-end"
-                        checked={Boolean(getTopicEndKind(selectedState))}
-                        onCheckedChange={(checked) => {
-                          if (project.selectedTopicId) {
-                            updateState(project.selectedTopicId, selectedState.id, { topicEndKind: checked === true ? 'positive' : undefined });
-                          }
-                        }}
-                      />
-                      <Label htmlFor="state-topic-end">Mark as Topic End</Label>
-                    </div>
-                  )}
+                  {!selectedState.isSystemNode && (() => {
+                    const topicEndKind = getTopicEndKind(selectedState);
+                    return (
+                      <div className="space-y-2">
+                        <Label htmlFor="state-topic-end">End-of-topic marker</Label>
+                        <Select
+                          value={topicEndKind ?? 'none'}
+                          onValueChange={(value) => {
+                            if (project.selectedTopicId) {
+                              updateState(project.selectedTopicId, selectedState.id, {
+                                topicEndKind: value === 'none' ? undefined : (value as 'positive' | 'negative'),
+                              });
+                            }
+                          }}
+                        >
+                          <SelectTrigger id="state-topic-end">
+                            <SelectValue placeholder="Not marked" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">Not marked</SelectItem>
+                            <SelectItem value="positive">Final (Positive)</SelectItem>
+                            <SelectItem value="negative">Final (Negative)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <p className="text-xs text-muted-foreground">
+                          Marks the end-of-topic semantics only; this does not make the state terminal.
+                        </p>
+                      </div>
+                    );
+                  })()}
 
                   {selectedState.isSystemNode && !canDeleteSelectedState && (
                     <p className="text-sm text-muted-foreground">
