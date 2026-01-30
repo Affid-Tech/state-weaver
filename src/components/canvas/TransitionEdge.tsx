@@ -1,4 +1,5 @@
 import { memo, useState, useCallback, useEffect } from 'react';
+import { LogIn, LogOut } from 'lucide-react';
 import {
   BaseEdge,
   EdgeLabelRenderer,
@@ -548,7 +549,7 @@ export const TransitionEdge = memo(({
             aria-label="Teleport anchor (out)"
             title="Teleport anchor (out)"
           >
-            OUT
+            <LogOut className="h-4 w-4" aria-hidden="true" />
           </div>
         </EdgeLabelRenderer>
       )}
@@ -569,7 +570,7 @@ export const TransitionEdge = memo(({
             aria-label="Teleport anchor (in)"
             title="Teleport anchor (in)"
           >
-            IN
+            <LogIn className="h-4 w-4" aria-hidden="true" />
           </div>
         </EdgeLabelRenderer>
       )}
