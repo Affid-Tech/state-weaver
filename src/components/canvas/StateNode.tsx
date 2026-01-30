@@ -194,7 +194,10 @@ export const StateNodeComponent = memo(({ data, id }: StateNodeProps) => {
 
       {!isFork && topicEndKind && (
         <div
-          className="absolute top-1 left-1 rounded-full bg-background/80 p-0.5 text-muted-foreground"
+          className={cn(
+            'absolute top-1 left-1 rounded-full bg-background/80 p-0.5',
+            topicEndKind === 'positive' ? 'text-green-600' : 'text-red-600'
+          )}
           role="img"
           aria-label={`Topic end: ${topicEndKind}`}
           title={`Topic end: ${topicEndKind}`}
