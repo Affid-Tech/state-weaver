@@ -153,18 +153,20 @@ function DiagramCanvasInner() {
         selfLoopLookup.set(transition.from, true);
       }
     });
-    return selectedTopicData.states.map((state) => ({
-      id: state.id,
-      type: 'stateNode',
-      position: state.position,
-      data: {
-        state,
-        isSelected: selectedElementId === state.id && selectedElementType === 'state',
-        isConnecting,
-        hasSelfLoops: selfLoopLookup.get(state.id) ?? false,
-        onSelect: handleNodeSelect,
-      },
-    }));
+    return selectedTopicData.states
+      .filter((state) => state.systemNodeType !== 'TopicEnd' && state.systemNodeType !== 'InstrumentEnd')
+      .map((state) => ({
+        id: state.id,
+        type: 'stateNode',
+        position: state.position,
+        data: {
+          state,
+          isSelected: selectedElementId === state.id && selectedElementType === 'state',
+          isConnecting,
+          hasSelfLoops: selfLoopLookup.get(state.id) ?? false,
+          onSelect: handleNodeSelect,
+        },
+      }));
   }, [selectedTopicData, selectedElementId, selectedElementType, handleNodeSelect, isConnecting, transitionVisibility]);
 
   // Compute edge indices for proper offset rendering
@@ -347,11 +349,11 @@ function DiagramCanvasInner() {
     (params: Connection) => {
       if (!project?.selectedTopicId || !params.source || !params.target || !selectedTopicData) return;
       
-      // Check if target is an end node (TopicEnd or InstrumentEnd)
       const targetState = selectedTopicData.states.find(s => s.id === params.target);
       const sourceState = selectedTopicData.states.find(s => s.id === params.source);
-      const isEndNode = targetState?.systemNodeType === 'TopicEnd'
-        || targetState?.systemNodeType === 'InstrumentEnd';
+      const targetTopicEndKind = targetState && Object.prototype.hasOwnProperty.call(targetState, 'topicEndKind')
+        ? (targetState.topicEndKind ?? 'positive')
+        : undefined;
       const isTargetFork = targetState?.systemNodeType === 'Fork';
       const isSourceFork = sourceState?.systemNodeType === 'Fork';
       
@@ -367,9 +369,8 @@ function DiagramCanvasInner() {
           params.targetHandle || 'target-top'
         );
         selectElement(transitionId, 'transition');
-      } else if (isEndNode) {
+      } else if (targetTopicEndKind) {
         // Auto-create transition without dialog - end transitions have no properties
-        const endTopicKind = targetState?.systemNodeType === 'TopicEnd' ? 'positive' : undefined;
         const transitionId = addTransition(
           project.selectedTopicId,
           params.source,
@@ -381,7 +382,7 @@ function DiagramCanvasInner() {
           undefined,
           undefined,
           undefined,
-          endTopicKind
+          targetTopicEndKind
         );
         selectElement(transitionId, 'transition');
       } else if (isSourceFork) {
