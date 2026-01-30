@@ -74,6 +74,7 @@ export interface DiagramState {
   updateTransition: (topicId: string, transitionId: string, updates: Partial<Omit<Transition, 'kind'>>) => void;
   deleteTransition: (topicId: string, transitionId: string) => void;
   updateTransitionRouting: (topicId: string, transitionId: string, sourceHandleId?: string, targetHandleId?: string, curveOffset?: number) => void;
+  updateTransitionTeleportAnchors: (topicId: string, transitionId: string, teleportAnchorIn?: Position, teleportAnchorOut?: Position) => void;
   getTransitionTeleportEnabled: (topicId: string, transitionId: string) => boolean;
   setTransitionTeleportEnabled: (topicId: string, transitionId: string, enabled: boolean) => void;
   setTransitionVisibility: (transitionId: string, isVisible: boolean) => void;
@@ -629,6 +630,21 @@ export const useDiagramStore = create<DiagramState>()(
               if (sourceHandleId !== undefined) transition.sourceHandleId = sourceHandleId;
               if (targetHandleId !== undefined) transition.targetHandleId = targetHandleId;
               if (curveOffset !== undefined) transition.curveOffset = curveOffset;
+              project.updatedAt = new Date().toISOString();
+            }
+          }
+        }),
+
+        updateTransitionTeleportAnchors: (topicId, transitionId, teleportAnchorIn, teleportAnchorOut) => set((state) => {
+          const project = state.projects.find(p => p.id === state.activeProjectId);
+          if (!project) return;
+
+          const topicData = project.topics.find(t => t.topic.id === topicId);
+          if (topicData) {
+            const transition = topicData.transitions.find(t => t.id === transitionId);
+            if (transition) {
+              if (teleportAnchorIn !== undefined) transition.teleportAnchorIn = teleportAnchorIn;
+              if (teleportAnchorOut !== undefined) transition.teleportAnchorOut = teleportAnchorOut;
               project.updatedAt = new Date().toISOString();
             }
           }

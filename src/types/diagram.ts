@@ -82,6 +82,8 @@ export interface Transition {
   sourceHandleId?: string; // which handle on source node
   targetHandleId?: string; // which handle on target node
   curveOffset?: number; // manual curve offset set by user
+  teleportAnchorIn?: Position;
+  teleportAnchorOut?: Position;
 }
 
 export interface TopicData {
