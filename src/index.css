@@ -156,6 +156,10 @@
   stroke-width: 2.5;
 }
 
+.react-flow__edge.selected .react-flow__edge-interaction {
+  pointer-events: none;
+}
+
 .react-flow__handle {
   width: 8px;
   height: 8px;

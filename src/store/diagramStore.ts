@@ -71,6 +71,10 @@ export interface DiagramState {
   
   // View mode
   setViewMode: (mode: 'topic' | 'aggregate') => void;
+
+  // Self-loop visibility
+  isSelfLoopTransitionHidden: (transitionId: string) => boolean;
+  toggleSelfLoopTransitionVisibility: (transitionId: string) => void;
   
   // Field config
   updateFieldConfig: (config: Partial<FieldConfig>) => void;
@@ -578,6 +582,19 @@ export const useDiagramStore = create<DiagramState>()(
         setViewMode: (mode) => set((state) => {
           state.viewMode = mode;
         }),
+
+        isSelfLoopTransitionHidden: (transitionId) => {
+          const state = get();
+          return Boolean(state.hiddenSelfLoopTransitionIds[transitionId]);
+        },
+
+        toggleSelfLoopTransitionVisibility: (transitionId) => set((state) => {
+          if (state.hiddenSelfLoopTransitionIds[transitionId]) {
+            delete state.hiddenSelfLoopTransitionIds[transitionId];
+          } else {
+            state.hiddenSelfLoopTransitionIds[transitionId] = true;
+          }
+        }),
         
         updateFieldConfig: (config) => set((state) => {
           Object.assign(state.fieldConfig, config);
@@ -629,6 +646,7 @@ export const useDiagramStore = create<DiagramState>()(
               state.activeProjectId = null;
               state.selectedElementId = null;
               state.selectedElementType = null;
+              state.hiddenSelfLoopTransitionIds = newState.hiddenSelfLoopTransitionIds ?? {};
             });
             return true;
           } catch {
@@ -642,6 +660,7 @@ export const useDiagramStore = create<DiagramState>()(
           state.activeProjectId = null;
           state.selectedElementId = null;
           state.selectedElementType = null;
+          state.hiddenSelfLoopTransitionIds = {};
         }),
       };
     }),
@@ -653,6 +672,7 @@ export const useDiagramStore = create<DiagramState>()(
         selectedElementId: state.selectedElementId,
         selectedElementType: state.selectedElementType,
         viewMode: state.viewMode,
+        hiddenSelfLoopTransitionIds: state.hiddenSelfLoopTransitionIds,
         fieldConfig: state.fieldConfig,
       }),
       onRehydrateStorage: () => (state) => {
