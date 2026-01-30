@@ -9,6 +9,7 @@ import {
 import { cn } from '@/lib/utils';
 import type { StateNode, Transition, TransitionKind } from '@/types/diagram';
 import { isRoutingOnlyTransition } from '@/types/diagram';
+import { useDiagramStore } from '@/store/diagramStore';
 
 interface TransitionEdgeData {
   transition: Transition;
@@ -317,6 +318,7 @@ export const TransitionEdge = memo(({
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState(manualCurveOffset);
   const { screenToFlowPosition, getNode } = useReactFlow();
+  const fieldConfig = useDiagramStore((state) => state.fieldConfig);
   
   // Sync dragOffset with stored value when not dragging
   useEffect(() => {
@@ -348,6 +350,7 @@ export const TransitionEdge = memo(({
   const isIncomingToFork = transition ? isRoutingOnlyTransition(transition, targetState) : false;
   const label = transition && !isIncomingToFork ? getTransitionLabel(transition) : '';
   const isEndTrans = transition ? isEndTransition(transition.kind) : false;
+  const flowColor = transition?.flowType ? fieldConfig.flowTypeColors?.[transition.flowType] : undefined;
 
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -355,6 +358,7 @@ export const TransitionEdge = memo(({
   };
 
   const isEdgeSelected = selected || edgeData?.isSelected;
+  const markerEnd = flowColor && transition?.flowType ? `url(#arrow-${transition.flowType})` : 'url(#arrow)';
   const reconnectAnchorRadius = 10;
   const visualHandleRadius = 6;
   const sourceHandlePosition = shiftHandlePosition(
@@ -420,11 +424,15 @@ export const TransitionEdge = memo(({
         id={id}
         path={edgePath}
         style={{
-          stroke: isEdgeSelected ? 'hsl(217, 91%, 50%)' : isEndTrans ? 'hsl(215, 16%, 60%)' : 'hsl(215, 16%, 47%)',
+          stroke: isEdgeSelected
+            ? 'hsl(217, 91%, 50%)'
+            : isEndTrans
+              ? 'hsl(215, 16%, 60%)'
+              : flowColor ?? 'hsl(215, 16%, 47%)',
           strokeWidth: isEdgeSelected ? 2.5 : 2,
           strokeDasharray: isEndTrans ? '4 2' : undefined,
         }}
-        markerEnd="url(#arrow)"
+        markerEnd={markerEnd}
         interactionWidth={interactionWidth ?? (isEdgeSelected ? 32 : 20)}
       />
       {isEdgeSelected && (
