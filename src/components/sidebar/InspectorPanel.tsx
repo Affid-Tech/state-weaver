@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Plus, Trash2, AlertCircle, AlertTriangle, CircleSlash } from 'lucide-react';
+import { Plus, Trash2, AlertCircle, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -48,8 +48,6 @@ export function InspectorPanel() {
   const selectedElementType = useDiagramStore(s => s.selectedElementType);
   const fieldConfig = useDiagramStore(s => s.fieldConfig);
   const addState = useDiagramStore(s => s.addState);
-  const addInstrumentEnd = useDiagramStore(s => s.addInstrumentEnd);
-  const addTopicEnd = useDiagramStore(s => s.addTopicEnd);
   const addFork = useDiagramStore(s => s.addFork);
   const updateState = useDiagramStore(s => s.updateState);
   const deleteState = useDiagramStore(s => s.deleteState);
@@ -89,16 +87,6 @@ export function InspectorPanel() {
     return selectedTopicData.transitions.find(t => t.id === selectedElementId) ?? null;
   }, [selectedTopicData, selectedElementType, selectedElementId]);
 
-  const hasInstrumentEnd = useMemo(() => {
-    if (!selectedTopicData) return false;
-    return selectedTopicData.states.some(s => s.systemNodeType === 'InstrumentEnd');
-  }, [selectedTopicData]);
-
-  const hasTopicEnd = useMemo(() => {
-    if (!selectedTopicData) return false;
-    return selectedTopicData.states.some(s => s.systemNodeType === 'TopicEnd' || getTopicEndKind(s));
-  }, [selectedTopicData]);
-
   const selfLoopTransitions = useMemo(() => {
     if (!selectedTopicData || !selectedState) return [];
     return selectedTopicData.transitions.filter(
@@ -116,22 +104,16 @@ export function InspectorPanel() {
     return parts.length > 0 ? parts.join(' / ') : 'No message properties';
   };
 
-  // Check if the selected state can be deleted (for system nodes, only if the other end exists)
+  // Check if the selected state can be deleted (system nodes are protected except forks)
   const canDeleteSelectedState = useMemo(() => {
     if (!selectedState) return false;
     if (!selectedState.isSystemNode) return true;
 
     if (selectedState.systemNodeType === 'Fork') return true;
-    
-    // TopicEnd can NEVER be deleted - topic must always have a proper end
-    if (selectedState.systemNodeType === 'TopicEnd') return false;
-    
-    // InstrumentEnd can be deleted only if TopicEnd exists
-    if (selectedState.systemNodeType === 'InstrumentEnd') return hasTopicEnd;
-    
+
     // Cannot delete start nodes (TopicStart, NewInstrument)
     return false;
-  }, [selectedState, hasTopicEnd]);
+  }, [selectedState]);
 
   // Pass fieldConfig to validation
   const validationIssues = useMemo(() => project ? validateProject(project, fieldConfig) : [], [project, fieldConfig]);
@@ -143,16 +125,6 @@ export function InspectorPanel() {
     addState(project.selectedTopicId, newStateLabel.trim());
     setNewStateLabel('');
     setIsAddStateOpen(false);
-  };
-
-  const handleAddInstrumentEnd = () => {
-    if (!project?.selectedTopicId) return;
-    addInstrumentEnd(project.selectedTopicId);
-  };
-
-  const handleAddTopicEnd = () => {
-    if (!project?.selectedTopicId) return;
-    addTopicEnd(project.selectedTopicId);
   };
 
   const handleAddFork = () => {
@@ -233,30 +205,6 @@ export function InspectorPanel() {
                 </DialogFooter>
               </DialogContent>
             </Dialog>
-
-            {!hasInstrumentEnd && (
-              <Button 
-                variant="outline" 
-                className="w-full" 
-                disabled={!project.selectedTopicId}
-                onClick={handleAddInstrumentEnd}
-              >
-                <CircleSlash className="h-4 w-4 mr-2" />
-                Add Instrument End
-              </Button>
-            )}
-
-            {!hasTopicEnd && (
-              <Button 
-                variant="outline" 
-                className="w-full" 
-                disabled={!project.selectedTopicId}
-                onClick={handleAddTopicEnd}
-              >
-                <CircleSlash className="h-4 w-4 mr-2" />
-                Add Topic End
-              </Button>
-            )}
 
             <Button 
               variant="outline" 

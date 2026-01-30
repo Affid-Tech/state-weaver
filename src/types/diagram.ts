@@ -156,5 +156,5 @@ export function getTopicEndKind(state?: StateNode): TopicEndKind | undefined {
 }
 
 export function isTopicEndState(state?: StateNode): boolean {
-  return state?.systemNodeType === 'TopicEnd' || getTopicEndKind(state) !== undefined;
+  return getTopicEndKind(state) !== undefined;
 }

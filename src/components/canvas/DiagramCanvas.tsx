@@ -351,9 +351,6 @@ function DiagramCanvasInner() {
       
       const targetState = selectedTopicData.states.find(s => s.id === params.target);
       const sourceState = selectedTopicData.states.find(s => s.id === params.source);
-      const targetTopicEndKind = targetState && Object.prototype.hasOwnProperty.call(targetState, 'topicEndKind')
-        ? (targetState.topicEndKind ?? 'positive')
-        : undefined;
       const isTargetFork = targetState?.systemNodeType === 'Fork';
       const isSourceFork = sourceState?.systemNodeType === 'Fork';
       
@@ -367,22 +364,6 @@ function DiagramCanvasInner() {
           undefined,
           params.sourceHandle || 'source-bottom',
           params.targetHandle || 'target-top'
-        );
-        selectElement(transitionId, 'transition');
-      } else if (targetTopicEndKind) {
-        // Auto-create transition without dialog - end transitions have no properties
-        const transitionId = addTransition(
-          project.selectedTopicId,
-          params.source,
-          params.target,
-          '', // Empty messageType for end transitions
-          'B2B', // Default flowType (not used for end transitions)
-          params.sourceHandle || 'source-bottom',
-          params.targetHandle || 'target-top',
-          undefined,
-          undefined,
-          undefined,
-          targetTopicEndKind
         );
         selectElement(transitionId, 'transition');
       } else if (isSourceFork) {

@@ -14,7 +14,7 @@ import type {
   Position,
   TopicEndKind 
 } from '@/types/diagram';
-import { deriveTransitionKind, getTopicEndKind } from '@/types/diagram';
+import { deriveTransitionKind } from '@/types/diagram';
 import type { FieldConfig } from '@/types/fieldConfig';
 import { DEFAULT_FIELD_CONFIG } from '@/types/fieldConfig';
 
@@ -52,8 +52,6 @@ export interface DiagramState {
   
   // State actions - now takes label instead of id
   addState: (topicId: string, label: string, position?: Position) => void;
-  addInstrumentEnd: (topicId: string) => void;
-  addTopicEnd: (topicId: string) => void;
   addFork: (topicId: string, position?: Position) => void;
   updateState: (topicId: string, stateId: string, updates: Partial<StateNode>) => void;
   deleteState: (topicId: string, stateId: string) => void;
@@ -383,63 +381,6 @@ export const useDiagramStore = create<DiagramState>()(
             project.updatedAt = new Date().toISOString();
           }
         }),
-
-        addInstrumentEnd: (topicId) => set((state) => {
-          const project = state.projects.find(p => p.id === state.activeProjectId);
-          if (!project) return;
-          
-          const topicData = project.topics.find(t => t.topic.id === topicId);
-          if (topicData) {
-            const exists = topicData.states.some(s => s.systemNodeType === 'InstrumentEnd');
-            if (!exists) {
-              const instrumentEnd: StateNode = {
-                id: 'InstrumentEnd',
-                label: 'Instrument End',
-                stereotype: 'End',
-                position: { x: 500, y: 300 },
-                isSystemNode: true,
-                systemNodeType: 'InstrumentEnd',
-              };
-              topicData.states.push(instrumentEnd);
-              project.updatedAt = new Date().toISOString();
-            }
-          }
-        }),
-
-        addTopicEnd: (topicId) => {
-          const { selectedElementId, selectedElementType } = get();
-          set((state) => {
-            const project = state.projects.find(p => p.id === state.activeProjectId);
-            if (!project) return;
-            
-            const topicData = project.topics.find(t => t.topic.id === topicId);
-            if (!topicData) return;
-            
-            const selectedState = selectedElementType === 'state'
-              ? topicData.states.find(s => s.id === selectedElementId)
-              : undefined;
-            if (selectedState && !selectedState.isSystemNode) {
-              selectedState.topicEndKind = 'positive';
-              project.updatedAt = new Date().toISOString();
-              return;
-            }
-
-            const hasTopicEndMarker = topicData.states.some(s => getTopicEndKind(s));
-            const hasTopicEndNode = topicData.states.some(s => s.systemNodeType === 'TopicEnd');
-            if (!hasTopicEndMarker && !hasTopicEndNode) {
-              const topicEnd: StateNode = {
-                id: 'TopicEnd',
-                label: 'Topic End',
-                stereotype: 'End',
-                position: { x: 400, y: 300 },
-                isSystemNode: true,
-                systemNodeType: 'TopicEnd',
-              };
-              topicData.states.push(topicEnd);
-              project.updatedAt = new Date().toISOString();
-            }
-          });
-        },
 
         addFork: (topicId, position) => set((state) => {
           const project = state.projects.find(p => p.id === state.activeProjectId);
