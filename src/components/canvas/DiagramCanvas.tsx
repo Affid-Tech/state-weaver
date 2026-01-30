@@ -165,6 +165,7 @@ function DiagramCanvasInner() {
       const indexInfo = edgeIndices.get(transition.id) ?? { index: 0, total: 1 };
       const sourceHandle = transition.sourceHandleId || 'source-bottom';
       const targetHandle = transition.targetHandleId || 'target-top';
+      const isSelected = selectedElementId === transition.id && selectedElementType === 'transition';
       return {
         id: transition.id,
         source: transition.from,
@@ -172,9 +173,10 @@ function DiagramCanvasInner() {
         sourceHandle,
         targetHandle,
         type: 'transition',
+        zIndex: isSelected ? 10 : 0,
         data: {
           transition,
-          isSelected: selectedElementId === transition.id && selectedElementType === 'transition',
+          isSelected,
           onSelect: handleEdgeSelect,
           onUpdateRouting: (curveOffset: number) => {
             if (project?.selectedTopicId) {
@@ -346,10 +348,35 @@ function DiagramCanvasInner() {
   }, [selectElement]);
 
   const onEdgeClick = useCallback(
-    (_event: React.MouseEvent, edge: Edge) => {
+    (event: React.MouseEvent, edge: Edge) => {
+      if (event.altKey) {
+        event.stopPropagation();
+        const overlappingEdges = edges.filter((candidate) => (
+          candidate.source === edge.source &&
+          candidate.target === edge.target &&
+          (candidate.sourceHandle ?? null) === (edge.sourceHandle ?? null) &&
+          (candidate.targetHandle ?? null) === (edge.targetHandle ?? null)
+        ));
+
+        if (overlappingEdges.length > 1) {
+          const currentIndex = overlappingEdges.findIndex((candidate) => candidate.id === edge.id);
+          const nextEdge = overlappingEdges[(currentIndex + 1) % overlappingEdges.length];
+
+          setEdges((prevEdges) =>
+            prevEdges.map((prevEdge) => ({
+              ...prevEdge,
+              selected: prevEdge.id === nextEdge.id,
+            }))
+          );
+          setNodes((prevNodes) => prevNodes.map((node) => ({ ...node, selected: false })));
+          selectElement(nextEdge.id, 'transition');
+          return;
+        }
+      }
+
       handleEdgeSelect(edge.id);
     },
-    [handleEdgeSelect]
+    [edges, handleEdgeSelect, selectElement, setEdges, setNodes]
   );
 
   // Connection mode handlers
@@ -462,6 +489,8 @@ function DiagramCanvasInner() {
               fitView
               proOptions={{ hideAttribution: true }}
               edgesReconnectable
+              elevateEdgesOnSelect
+              reconnectRadius={10}
               selectionOnDrag
               selectNodesOnDrag
               multiSelectionKeyCode="Shift"
