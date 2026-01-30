@@ -66,12 +66,13 @@ export interface Transition {
   from: string; // state id
   to: string;   // state id
   kind: TransitionKind;
+  isRoutingOnly?: boolean;
   // Message properties
   revision?: string; // R1, R2, R3 - optional
   instrument?: string; // optional
   topic?: string; // optional
-  messageType: string; // required
-  flowType: FlowType; // required
+  messageType?: string;
+  flowType?: FlowType;
   // Edge routing properties (persisted)
   sourceHandleId?: string; // which handle on source node
   targetHandleId?: string; // which handle on target node

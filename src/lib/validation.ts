@@ -184,6 +184,9 @@ function validateTopic(topicData: TopicData, instrumentType: string, fieldConfig
   transitions.forEach((transition) => {
     const fromState = states.find(s => s.id === transition.from);
     const toState = states.find(s => s.id === transition.to);
+    const isForkTransition = transition.isRoutingOnly
+      || fromState?.systemNodeType === 'Fork'
+      || toState?.systemNodeType === 'Fork';
 
     if (!fromState) {
       issues.push({
@@ -243,9 +246,39 @@ function validateTopic(topicData: TopicData, instrumentType: string, fieldConfig
 
     // Validate transition field values against config (only for non-end transitions)
     if (transition.kind !== 'endTopic' && transition.kind !== 'endInstrument') {
-      issues.push(...validateTransitionFields(transition, topic.id, fieldConfig));
+      issues.push(...validateTransitionFields(transition, topic.id, fieldConfig, isForkTransition));
     }
   });
+
+  // Warn about forks without incoming or outgoing transitions
+  states
+    .filter(state => state.systemNodeType === 'Fork')
+    .forEach((forkState) => {
+      const hasIncoming = transitions.some(t => t.to === forkState.id);
+      const hasOutgoing = transitions.some(t => t.from === forkState.id);
+
+      if (!hasIncoming) {
+        issues.push({
+          id: uuidv4(),
+          level: 'warning',
+          message: `Fork "${forkState.label}" has no incoming transitions`,
+          topicId: topic.id,
+          elementId: forkState.id,
+          elementType: 'state',
+        });
+      }
+
+      if (!hasOutgoing) {
+        issues.push({
+          id: uuidv4(),
+          level: 'warning',
+          message: `Fork "${forkState.label}" has no outgoing transitions`,
+          topicId: topic.id,
+          elementId: forkState.id,
+          elementType: 'state',
+        });
+      }
+    });
 
   // Check for orphan states (warning)
   states.forEach((state) => {
@@ -292,7 +325,7 @@ function validateTopic(topicData: TopicData, instrumentType: string, fieldConfig
   return issues;
 }
 
-function validateTransitionFields(transition: Transition, topicId: string, fieldConfig?: FieldConfig): ValidationIssue[] {
+function validateTransitionFields(transition: Transition, topicId: string, fieldConfig: FieldConfig | undefined, isRoutingOnly: boolean): ValidationIssue[] {
   const issues: ValidationIssue[] = [];
 
   // Validate revision field
@@ -371,7 +404,7 @@ function validateTransitionFields(transition: Transition, topicId: string, field
   }
 
   // Validate messageType field (required)
-  if (!transition.messageType || transition.messageType.trim() === '') {
+  if (!isRoutingOnly && (!transition.messageType || transition.messageType.trim() === '')) {
     issues.push({
       id: uuidv4(),
       level: 'error',
@@ -380,7 +413,7 @@ function validateTransitionFields(transition: Transition, topicId: string, field
       elementId: transition.id,
       elementType: 'transition',
     });
-  } else if (!isValidEnumName(transition.messageType)) {
+  } else if (transition.messageType && !isValidEnumName(transition.messageType)) {
     issues.push({
       id: uuidv4(),
       level: 'warning',
@@ -389,7 +422,7 @@ function validateTransitionFields(transition: Transition, topicId: string, field
       elementId: transition.id,
       elementType: 'transition',
     });
-  } else if (fieldConfig?.messageTypes && fieldConfig.messageTypes.length > 0) {
+  } else if (transition.messageType && fieldConfig?.messageTypes && fieldConfig.messageTypes.length > 0) {
     if (!fieldConfig.messageTypes.includes(transition.messageType)) {
       issues.push({
         id: uuidv4(),
@@ -403,7 +436,7 @@ function validateTransitionFields(transition: Transition, topicId: string, field
   }
 
   // Validate flowType field (required)
-  if (!transition.flowType || transition.flowType.trim() === '') {
+  if (!isRoutingOnly && (!transition.flowType || transition.flowType.trim() === '')) {
     issues.push({
       id: uuidv4(),
       level: 'error',
@@ -412,7 +445,7 @@ function validateTransitionFields(transition: Transition, topicId: string, field
       elementId: transition.id,
       elementType: 'transition',
     });
-  } else if (!isValidEnumName(transition.flowType)) {
+  } else if (transition.flowType && !isValidEnumName(transition.flowType)) {
     issues.push({
       id: uuidv4(),
       level: 'warning',
@@ -421,7 +454,7 @@ function validateTransitionFields(transition: Transition, topicId: string, field
       elementId: transition.id,
       elementType: 'transition',
     });
-  } else if (fieldConfig?.flowTypes && fieldConfig.flowTypes.length > 0) {
+  } else if (transition.flowType && fieldConfig?.flowTypes && fieldConfig.flowTypes.length > 0) {
     if (!fieldConfig.flowTypes.includes(transition.flowType)) {
       issues.push({
         id: uuidv4(),

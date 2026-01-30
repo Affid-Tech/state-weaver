@@ -317,7 +317,9 @@ export function InspectorPanel() {
                   </div>
 
                   {/* Only show editable properties for non-end transitions */}
-                  {selectedTransition.kind !== 'endTopic' && selectedTransition.kind !== 'endInstrument' ? (
+                  {selectedTransition.kind !== 'endTopic'
+                  && selectedTransition.kind !== 'endInstrument'
+                  && !selectedTransition.isRoutingOnly ? (
                     <>
                       <div className="space-y-2">
                         <Label>Revision (optional)</Label>
@@ -370,7 +372,7 @@ export function InspectorPanel() {
                       <div className="space-y-2">
                         <Label>MessageType *</Label>
                         <Combobox
-                          value={selectedTransition.messageType}
+                          value={selectedTransition.messageType ?? ''}
                           onChange={(v) => {
                             if (project.selectedTopicId) {
                               updateTransition(project.selectedTopicId, selectedTransition.id, { 
@@ -386,7 +388,7 @@ export function InspectorPanel() {
                       <div className="space-y-2">
                         <Label>FlowType *</Label>
                         <Combobox
-                          value={selectedTransition.flowType}
+                          value={selectedTransition.flowType ?? ''}
                           onChange={(v) => {
                             if (project.selectedTopicId && v) {
                               updateTransition(project.selectedTopicId, selectedTransition.id, { 
@@ -401,7 +403,9 @@ export function InspectorPanel() {
                     </>
                   ) : (
                     <p className="text-sm text-muted-foreground italic">
-                      End transitions have no message properties.
+                      {selectedTransition.isRoutingOnly
+                        ? 'Fork transitions have no message properties.'
+                        : 'End transitions have no message properties.'}
                     </p>
                   )}
 
