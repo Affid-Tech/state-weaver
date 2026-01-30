@@ -105,6 +105,7 @@ function DiagramCanvasInner() {
   const updateStatePosition = useDiagramStore(s => s.updateStatePosition);
   const addState = useDiagramStore(s => s.addState);
   const addFork = useDiagramStore(s => s.addFork);
+  const fieldConfig = useDiagramStore(s => s.fieldConfig);
 
   const [pendingConnection, setPendingConnection] = useState<PendingConnection | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
@@ -129,6 +130,10 @@ function DiagramCanvasInner() {
     if (!selectedTopicData) return pendingConnection.target;
     return selectedTopicData.states.find(state => state.id === pendingConnection.target)?.label ?? pendingConnection.target;
   }, [pendingConnection, selectedTopicData]);
+
+  const flowTypeMarkers = useMemo(() => {
+    return Object.entries(fieldConfig.flowTypeColors ?? {});
+  }, [fieldConfig.flowTypeColors]);
 
   const handleNodeSelect = useCallback((nodeId: string) => {
     selectElement(nodeId, 'state');
@@ -518,6 +523,23 @@ function DiagramCanvasInner() {
                       fill="hsl(215, 16%, 47%)"
                     />
                   </marker>
+                  {flowTypeMarkers.map(([flowType, color]) => (
+                    <marker
+                      key={flowType}
+                      id={`arrow-${flowType}`}
+                      viewBox="0 0 10 10"
+                      refX="8"
+                      refY="5"
+                      markerWidth="6"
+                      markerHeight="6"
+                      orient="auto-start-reverse"
+                    >
+                      <path
+                        d="M 0 0 L 10 5 L 0 10 z"
+                        fill={color}
+                      />
+                    </marker>
+                  ))}
                 </defs>
               </svg>
             </ReactFlow>
