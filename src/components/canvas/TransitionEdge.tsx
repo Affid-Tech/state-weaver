@@ -373,14 +373,30 @@ export const TransitionEdge = memo(({
     sourcePosition,
     reconnectAnchorRadius
   );
-  const teleportMidpoint = teleportAnchorIn && teleportAnchorOut
-    ? {
-        x: (teleportAnchorIn.x + teleportAnchorOut.x) / 2,
-        y: (teleportAnchorIn.y + teleportAnchorOut.y) / 2,
-      }
+  const teleportLabelAnchor = teleportAnchorIn && teleportAnchorOut
+    ? (() => {
+        const dx = targetX - teleportAnchorIn.x;
+        const dy = targetY - teleportAnchorIn.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        const t = 0.4;
+        const baseX = teleportAnchorIn.x + dx * t;
+        const baseY = teleportAnchorIn.y + dy * t;
+
+        if (distance < 1) {
+          return { x: baseX, y: baseY };
+        }
+
+        const perpX = -dy / distance;
+        const perpY = dx / distance;
+        const nudge = 12;
+        return {
+          x: baseX + perpX * nudge,
+          y: baseY + perpY * nudge,
+        };
+      })()
     : null;
-  const labelAnchorX = teleportMidpoint ? teleportMidpoint.x : labelX;
-  const labelAnchorY = teleportMidpoint ? teleportMidpoint.y - 18 : labelY;
+  const labelAnchorX = teleportLabelAnchor ? teleportLabelAnchor.x : labelX;
+  const labelAnchorY = teleportLabelAnchor ? teleportLabelAnchor.y : labelY;
   const edgeSegments = teleportAnchorIn && teleportAnchorOut
     ? [
         {
