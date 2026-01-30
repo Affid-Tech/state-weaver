@@ -54,6 +54,8 @@ export function InspectorPanel() {
   const updateTransition = useDiagramStore(s => s.updateTransition);
   const updateTransitionRouting = useDiagramStore(s => s.updateTransitionRouting);
   const deleteTransition = useDiagramStore(s => s.deleteTransition);
+  const getTransitionTeleportEnabled = useDiagramStore(s => s.getTransitionTeleportEnabled);
+  const setTransitionTeleportEnabled = useDiagramStore(s => s.setTransitionTeleportEnabled);
   const selectElement = useDiagramStore(s => s.selectElement);
   const selectTopic = useDiagramStore(s => s.selectTopic);
   const transitionVisibility = useDiagramStore(s => s.transitionVisibility);
@@ -86,6 +88,11 @@ export function InspectorPanel() {
     if (!selectedTopicData || selectedElementType !== 'transition' || !selectedElementId) return null;
     return selectedTopicData.transitions.find(t => t.id === selectedElementId) ?? null;
   }, [selectedTopicData, selectedElementType, selectedElementId]);
+
+  const transitionTeleportEnabled = useMemo(() => {
+    if (!project?.selectedTopicId || !selectedTransition) return false;
+    return getTransitionTeleportEnabled(project.selectedTopicId, selectedTransition.id);
+  }, [getTransitionTeleportEnabled, project?.selectedTopicId, selectedTransition]);
 
   const selfLoopTransitions = useMemo(() => {
     if (!selectedTopicData || !selectedState) return [];
@@ -584,6 +591,30 @@ export function InspectorPanel() {
                       />
                       <p className="text-xs text-muted-foreground">
                         Adjust to move the curve left (-) or right (+)
+                      </p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Checkbox
+                          id={`transition-teleport-${selectedTransition.id}`}
+                          checked={transitionTeleportEnabled}
+                          onCheckedChange={(checked) => {
+                            if (project.selectedTopicId) {
+                              setTransitionTeleportEnabled(
+                                project.selectedTopicId,
+                                selectedTransition.id,
+                                checked === true
+                              );
+                            }
+                          }}
+                        />
+                        <Label htmlFor={`transition-teleport-${selectedTransition.id}`}>
+                          Enable teleport routing
+                        </Label>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Draws a split edge with midpoint anchors instead of a single curve.
                       </p>
                     </div>
                   </div>

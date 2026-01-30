@@ -74,6 +74,8 @@ export interface DiagramState {
   updateTransition: (topicId: string, transitionId: string, updates: Partial<Omit<Transition, 'kind'>>) => void;
   deleteTransition: (topicId: string, transitionId: string) => void;
   updateTransitionRouting: (topicId: string, transitionId: string, sourceHandleId?: string, targetHandleId?: string, curveOffset?: number) => void;
+  getTransitionTeleportEnabled: (topicId: string, transitionId: string) => boolean;
+  setTransitionTeleportEnabled: (topicId: string, transitionId: string, enabled: boolean) => void;
   setTransitionVisibility: (transitionId: string, isVisible: boolean) => void;
   setTransitionsVisibility: (transitionIds: string[], isVisible: boolean) => void;
   
@@ -559,6 +561,7 @@ export const useDiagramStore = create<DiagramState>()(
                 kind,
                 isRoutingOnly,
                 endTopicKind: resolvedEndTopicKind,
+                teleportEnabled: false,
                 messageType: isRoutingOnly ? undefined : messageType,
                 flowType: isRoutingOnly ? undefined : flowType,
                 sourceHandleId,
@@ -628,6 +631,28 @@ export const useDiagramStore = create<DiagramState>()(
               if (curveOffset !== undefined) transition.curveOffset = curveOffset;
               project.updatedAt = new Date().toISOString();
             }
+          }
+        }),
+
+        getTransitionTeleportEnabled: (topicId, transitionId) => {
+          const state = get();
+          const project = state.projects.find(p => p.id === state.activeProjectId);
+          if (!project) return false;
+          const topicData = project.topics.find(t => t.topic.id === topicId);
+          if (!topicData) return false;
+          const transition = topicData.transitions.find(t => t.id === transitionId);
+          return transition?.teleportEnabled === true;
+        },
+
+        setTransitionTeleportEnabled: (topicId, transitionId, enabled) => set((state) => {
+          const project = state.projects.find(p => p.id === state.activeProjectId);
+          if (!project) return;
+          const topicData = project.topics.find(t => t.topic.id === topicId);
+          if (!topicData) return;
+          const transition = topicData.transitions.find(t => t.id === transitionId);
+          if (transition) {
+            transition.teleportEnabled = enabled;
+            project.updatedAt = new Date().toISOString();
           }
         }),
 

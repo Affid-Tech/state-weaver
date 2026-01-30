@@ -246,11 +246,14 @@ function DiagramCanvasInner() {
       const sourceHandle = transition.sourceHandleId || 'source-bottom';
       const targetHandle = transition.targetHandleId || 'target-top';
       const isSelected = selectedElementId === transition.id && selectedElementType === 'transition';
+      const teleportEnabled = transition.teleportEnabled === true;
       const sourceState = selectedTopicData.states.find((state) => state.id === transition.from);
       const targetState = selectedTopicData.states.find((state) => state.id === transition.to);
-      const fallbackAnchors = sourceState && targetState
+      const fallbackAnchors = teleportEnabled && sourceState && targetState
         ? buildTeleportAnchors(sourceState.position, targetState.position)
         : undefined;
+      const teleportAnchorIn = teleportEnabled ? teleportAnchors[transition.id]?.in : undefined;
+      const teleportAnchorOut = teleportEnabled ? teleportAnchors[transition.id]?.out : undefined;
       return {
         id: transition.id,
         source: transition.from,
@@ -272,8 +275,12 @@ function DiagramCanvasInner() {
           totalEdges: indexInfo.total,
           sourceHandleId: sourceHandle,
           targetHandleId: targetHandle,
-          teleportAnchorIn: teleportAnchors[transition.id]?.in,
-          teleportAnchorOut: teleportAnchors[transition.id]?.out,
+          ...(teleportEnabled
+            ? {
+                teleportAnchorIn,
+                teleportAnchorOut,
+              }
+            : {}),
           onUpdateTeleportAnchor: (anchorType: 'in' | 'out', position: XYPosition) => {
             setTeleportAnchors((prev) => ({
               ...prev,
