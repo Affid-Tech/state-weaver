@@ -69,33 +69,99 @@ export const StateNodeComponent = memo(({ data, id }: StateNodeProps) => {
         isSelected && 'ring-2 ring-state-selected-ring ring-offset-2 ring-offset-background'
       )}
     >
-      {/* Target handles (inputs) - on all sides except for start nodes */}
-      {!isStart && (
+      {isFork ? (
+        <div className="absolute inset-0 -rotate-45">
+          {/* Target handles (inputs) - on all sides except for start nodes */}
+          {!isStart && (
+            <>
+              <Handle
+                type="target"
+                position={Position.Top}
+                id="target-top"
+                className={handleClass}
+              />
+              <Handle
+                type="target"
+                position={Position.Left}
+                id="target-left"
+                className={handleClass}
+              />
+              <Handle
+                type="target"
+                position={Position.Right}
+                id="target-right"
+                className={handleClass}
+              />
+              <Handle
+                type="target"
+                position={Position.Bottom}
+                id="target-bottom"
+                className={handleClass}
+              />
+            </>
+          )}
+
+          {/* Source handles (outputs) - on all sides except for end nodes */}
+          {!isEnd && (
+            <>
+              <Handle
+                type="source"
+                position={Position.Top}
+                id="source-top"
+                className={handleClass}
+              />
+              <Handle
+                type="source"
+                position={Position.Left}
+                id="source-left"
+                className={handleClass}
+              />
+              <Handle
+                type="source"
+                position={Position.Right}
+                id="source-right"
+                className={handleClass}
+              />
+              <Handle
+                type="source"
+                position={Position.Bottom}
+                id="source-bottom"
+                className={handleClass}
+              />
+            </>
+          )}
+        </div>
+      ) : (
         <>
-          <Handle
-            type="target"
-            position={Position.Top}
-            id="target-top"
-            className={handleClass}
-          />
-          <Handle
-            type="target"
-            position={Position.Left}
-            id="target-left"
-            className={handleClass}
-          />
-          <Handle
-            type="target"
-            position={Position.Right}
-            id="target-right"
-            className={handleClass}
-          />
-          <Handle
-            type="target"
-            position={Position.Bottom}
-            id="target-bottom"
-            className={handleClass}
-          />
+          {/* Target handles (inputs) - on all sides except for start nodes */}
+          {!isStart && (
+            <>
+              <Handle
+                type="target"
+                position={Position.Top}
+                id="target-top"
+                className={handleClass}
+              />
+              <Handle
+                type="target"
+                position={Position.Left}
+                id="target-left"
+                className={handleClass}
+              />
+              <Handle
+                type="target"
+                position={Position.Right}
+                id="target-right"
+                className={handleClass}
+              />
+              <Handle
+                type="target"
+                position={Position.Bottom}
+                id="target-bottom"
+                className={handleClass}
+              />
+            </>
+          )}
         </>
       )}
       
@@ -116,33 +182,37 @@ export const StateNodeComponent = memo(({ data, id }: StateNodeProps) => {
         </div>
       )}
 
-      {/* Source handles (outputs) - on all sides except for end nodes */}
-      {!isEnd && (
+      {!isFork && (
         <>
-          <Handle
-            type="source"
-            position={Position.Top}
-            id="source-top"
-            className={handleClass}
-          />
-          <Handle
-            type="source"
-            position={Position.Left}
-            id="source-left"
-            className={handleClass}
-          />
-          <Handle
-            type="source"
-            position={Position.Right}
-            id="source-right"
-            className={handleClass}
-          />
-          <Handle
-            type="source"
-            position={Position.Bottom}
-            id="source-bottom"
-            className={handleClass}
-          />
+          {/* Source handles (outputs) - on all sides except for end nodes */}
+          {!isEnd && (
+            <>
+              <Handle
+                type="source"
+                position={Position.Top}
+                id="source-top"
+                className={handleClass}
+              />
+              <Handle
+                type="source"
+                position={Position.Left}
+                id="source-left"
+                className={handleClass}
+              />
+              <Handle
+                type="source"
+                position={Position.Right}
+                id="source-right"
+                className={handleClass}
+              />
+              <Handle
+                type="source"
+                position={Position.Bottom}
+                id="source-bottom"
+                className={handleClass}
+              />
+            </>
+          )}
         </>
       )}
     </div>
