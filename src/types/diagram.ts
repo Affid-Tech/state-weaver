@@ -18,6 +18,8 @@ export type SystemNodeType =
   | 'InstrumentEnd'
   | 'Fork';
 
+export type TopicEndKind = 'positive' | 'negative';
+
 export const RESERVED_NODE_NAMES = [
   'Start', 'End', 'NewInstrument', 'InstrumentEnd', 'NewTopicIn', 'NewTopicOut', 
   'TopicStart', 'TopicEnd', 'Fork'
@@ -59,7 +61,7 @@ export interface StateNode {
   position: Position;
   isSystemNode: boolean;
   systemNodeType?: SystemNodeType;
-  isTopicEnd?: boolean;
+  topicEndKind?: TopicEndKind;
 }
 
 export interface Transition {
@@ -142,4 +144,16 @@ export function isRoutingOnlyTransition(transition: Transition, toState?: StateN
     return toState.systemNodeType === 'Fork';
   }
   return transition.isRoutingOnly ?? false;
+}
+
+export function getTopicEndKind(state?: StateNode): TopicEndKind | undefined {
+  if (!state) return undefined;
+  if (Object.prototype.hasOwnProperty.call(state, 'topicEndKind')) {
+    return state.topicEndKind ?? 'positive';
+  }
+  return undefined;
+}
+
+export function isTopicEndState(state?: StateNode): boolean {
+  return state?.systemNodeType === 'TopicEnd' || getTopicEndKind(state) !== undefined;
 }

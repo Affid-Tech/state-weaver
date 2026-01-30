@@ -1,5 +1,5 @@
 import type { DiagramProject, TopicData, StateNode, Transition, Instrument, Topic } from '@/types/diagram';
-import { isRoutingOnlyTransition, labelToEnumId } from '@/types/diagram';
+import { getTopicEndKind, isRoutingOnlyTransition, isTopicEndState, labelToEnumId } from '@/types/diagram';
 
 const INLINE_STYLES = `skinparam state {
   BackgroundColor #F8FAFC
@@ -40,9 +40,6 @@ function escapeLabel(label: string): string {
 
 const isTopicEndSystemNode = (state: StateNode | undefined): boolean =>
   state?.systemNodeType === 'TopicEnd';
-
-const isTopicEndState = (state: StateNode | undefined): boolean =>
-  isTopicEndSystemNode(state) || state?.isTopicEnd === true;
 
 // Get PUML-safe state ID from a StateNode
 function getStateEnumId(state: StateNode): string {
@@ -165,7 +162,7 @@ export function generateTopicPuml(project: DiagramProject, topicId: string): str
   const { instrument } = project;
   const { topic, states } = topicData;
   const renderTransitions = getTopicRenderTransitions(topicData, instrument);
-  const markedTopicEnds = states.filter((state) => state.isTopicEnd && !state.isSystemNode);
+  const markedTopicEnds = states.filter((state) => getTopicEndKind(state) && !state.isSystemNode);
   const hasTopicEndNode = states.some((state) => state.systemNodeType === 'TopicEnd');
   const hasSyntheticTopicEnd = !hasTopicEndNode && markedTopicEnds.length > 0;
 
@@ -320,7 +317,7 @@ export function generateAggregatePuml(project: DiagramProject): string | null {
   rootTopics.forEach((rootTopic) => {
     const rootId = `${instrument.type}.${rootTopic.topic.id}`;
     const rootMarkedTopicEnds = rootTopic.states.filter(
-      (state) => state.isTopicEnd && !state.isSystemNode
+      (state) => getTopicEndKind(state) && !state.isSystemNode
     );
     const rootHasTopicEndNode = rootTopic.states.some(
       (state) => state.systemNodeType === 'TopicEnd'
@@ -390,7 +387,7 @@ export function generateAggregatePuml(project: DiagramProject): string | null {
   normalTopics.forEach((topicData) => {
     const topicAlias = `${instrument.type}.${topicData.topic.id}`;
     const markedTopicEnds = topicData.states.filter(
-      (state) => state.isTopicEnd && !state.isSystemNode
+      (state) => getTopicEndKind(state) && !state.isSystemNode
     );
     const hasTopicEndNode = topicData.states.some(
       (state) => state.systemNodeType === 'TopicEnd'
