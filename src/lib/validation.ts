@@ -270,6 +270,27 @@ function validateTopic(topicData: TopicData, instrumentType: string, fieldConfig
         elementType: 'transition',
       });
     }
+    if (transition.kind === 'endTopic') {
+      if (!transition.endTopicKind) {
+        issues.push({
+          id: uuidv4(),
+          level: 'error',
+          message: 'End topic transitions must specify an end topic kind',
+          topicId: topic.id,
+          elementId: transition.id,
+          elementType: 'transition',
+        });
+      } else if (!['positive', 'negative'].includes(transition.endTopicKind)) {
+        issues.push({
+          id: uuidv4(),
+          level: 'error',
+          message: `End topic kind "${transition.endTopicKind}" must be "positive" or "negative"`,
+          topicId: topic.id,
+          elementId: transition.id,
+          elementType: 'transition',
+        });
+      }
+    }
 
     // Validate transition field values against config (only for non-end transitions)
     if (transition.kind !== 'endTopic' && transition.kind !== 'endInstrument') {

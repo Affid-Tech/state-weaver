@@ -70,6 +70,7 @@ export interface Transition {
   to: string;   // state id
   kind: TransitionKind;
   isRoutingOnly?: boolean;
+  endTopicKind?: TopicEndKind;
   // Message properties
   revision?: string; // R1, R2, R3 - optional
   instrument?: string; // optional

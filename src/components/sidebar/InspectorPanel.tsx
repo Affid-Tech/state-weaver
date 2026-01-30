@@ -420,6 +420,30 @@ export function InspectorPanel() {
                     </p>
                   </div>
 
+                  {selectedTransition.kind === 'endTopic' && (
+                    <div className="space-y-2">
+                      <Label>End Topic Kind</Label>
+                      <Select
+                        value={selectedTransition.endTopicKind ?? 'positive'}
+                        onValueChange={(value) => {
+                          if (project.selectedTopicId) {
+                            updateTransition(project.selectedTopicId, selectedTransition.id, {
+                              endTopicKind: value as 'positive' | 'negative',
+                            });
+                          }
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="positive">Positive</SelectItem>
+                          <SelectItem value="negative">Negative</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+
                   {/* Only show editable properties for non-end transitions */}
                   {selectedTransition.kind !== 'endTopic'
                   && selectedTransition.kind !== 'endInstrument'
