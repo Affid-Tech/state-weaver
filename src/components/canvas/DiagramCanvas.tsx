@@ -112,7 +112,7 @@ function DiagramCanvasInner() {
   const [isConnecting, setIsConnecting] = useState(false);
   const [newStateDialogOpen, setNewStateDialogOpen] = useState(false);
   const [newStatePosition, setNewStatePosition] = useState<XYPosition>({ x: 0, y: 0 });
-  const [teleportAnchors, setTeleportAnchors] = useState<Record<string, XYPosition>>({});
+  const [teleportAnchors, setTeleportAnchors] = useState<Record<string, { in: XYPosition; out: XYPosition }>>({});
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const { getNodes, screenToFlowPosition } = useReactFlow();
 
@@ -173,6 +173,39 @@ function DiagramCanvasInner() {
     return computeEdgeIndices(selectedTopicData.transitions);
   }, [selectedTopicData]);
 
+  const buildTeleportAnchors = useCallback((source: XYPosition, target: XYPosition) => {
+    const midX = (source.x + target.x) / 2;
+    const midY = (source.y + target.y) / 2;
+    const dx = target.x - source.x;
+    const dy = target.y - source.y;
+    const distance = Math.hypot(dx, dy);
+    const separation = 60;
+    const offset = 18;
+
+    if (distance < 1) {
+      return {
+        out: { x: midX - separation / 2, y: midY - offset },
+        in: { x: midX + separation / 2, y: midY + offset },
+      };
+    }
+
+    const ux = dx / distance;
+    const uy = dy / distance;
+    const perpX = -uy;
+    const perpY = ux;
+
+    return {
+      out: {
+        x: midX - ux * separation / 2 + perpX * offset,
+        y: midY - uy * separation / 2 + perpY * offset,
+      },
+      in: {
+        x: midX + ux * separation / 2 + perpX * offset,
+        y: midY + uy * separation / 2 + perpY * offset,
+      },
+    };
+  }, []);
+
   useEffect(() => {
     if (!selectedTopicData) return;
     setTeleportAnchors((prev) => {
@@ -193,17 +226,14 @@ function DiagramCanvasInner() {
           const sourceState = selectedTopicData.states.find((state) => state.id === candidate.from);
           const targetState = selectedTopicData.states.find((state) => state.id === candidate.to);
           if (sourceState && targetState) {
-            next[candidate.id] = {
-              x: (sourceState.position.x + targetState.position.x) / 2,
-              y: (sourceState.position.y + targetState.position.y) / 2,
-            };
+            next[candidate.id] = buildTeleportAnchors(sourceState.position, targetState.position);
           }
         }
       }
 
       return next;
     });
-  }, [selectedTopicData, transitionVisibility]);
+  }, [selectedTopicData, transitionVisibility, buildTeleportAnchors]);
 
   const initialEdges: Edge[] = useMemo(() => {
     if (!selectedTopicData) return [];
@@ -214,6 +244,11 @@ function DiagramCanvasInner() {
       const sourceHandle = transition.sourceHandleId || 'source-bottom';
       const targetHandle = transition.targetHandleId || 'target-top';
       const isSelected = selectedElementId === transition.id && selectedElementType === 'transition';
+      const sourceState = selectedTopicData.states.find((state) => state.id === transition.from);
+      const targetState = selectedTopicData.states.find((state) => state.id === transition.to);
+      const fallbackAnchors = sourceState && targetState
+        ? buildTeleportAnchors(sourceState.position, targetState.position)
+        : undefined;
       return {
         id: transition.id,
         source: transition.from,
@@ -235,11 +270,21 @@ function DiagramCanvasInner() {
           totalEdges: indexInfo.total,
           sourceHandleId: sourceHandle,
           targetHandleId: targetHandle,
-          teleportAnchor: teleportAnchors[transition.id],
+          teleportAnchorIn: teleportAnchors[transition.id]?.in,
+          teleportAnchorOut: teleportAnchors[transition.id]?.out,
+          onUpdateTeleportAnchor: (anchorType: 'in' | 'out', position: XYPosition) => {
+            setTeleportAnchors((prev) => ({
+              ...prev,
+              [transition.id]: {
+                ...(prev[transition.id] ?? fallbackAnchors ?? { in: position, out: position }),
+                [anchorType]: position,
+              },
+            }));
+          },
         },
       };
     });
-  }, [selectedTopicData, selectedElementId, selectedElementType, handleEdgeSelect, edgeIndices, project?.selectedTopicId, transitionVisibility, updateTransitionRouting, teleportAnchors]);
+  }, [selectedTopicData, selectedElementId, selectedElementType, handleEdgeSelect, edgeIndices, project?.selectedTopicId, transitionVisibility, updateTransitionRouting, teleportAnchors, buildTeleportAnchors]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);

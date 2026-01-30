@@ -20,7 +20,9 @@ interface TransitionEdgeData {
   totalEdges?: number;
   sourceHandleId?: string;
   targetHandleId?: string;
-  teleportAnchor?: { x: number; y: number };
+  teleportAnchorIn?: { x: number; y: number };
+  teleportAnchorOut?: { x: number; y: number };
+  onUpdateTeleportAnchor?: (anchorType: 'in' | 'out', position: { x: number; y: number }) => void;
 }
 
 // Direction vectors for each handle position
@@ -315,10 +317,12 @@ export const TransitionEdge = memo(({
   const manualCurveOffset = transition?.curveOffset ?? 0;
   const sourceHandleId = edgeData?.sourceHandleId;
   const targetHandleId = edgeData?.targetHandleId;
-  const teleportAnchor = edgeData?.teleportAnchor;
+  const teleportAnchorIn = edgeData?.teleportAnchorIn;
+  const teleportAnchorOut = edgeData?.teleportAnchorOut;
   
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState(manualCurveOffset);
+  const [anchorDragging, setAnchorDragging] = useState<'in' | 'out' | null>(null);
   const { screenToFlowPosition, getNode } = useReactFlow();
   const fieldConfig = useDiagramStore((state) => state.fieldConfig);
   
@@ -369,18 +373,24 @@ export const TransitionEdge = memo(({
     sourcePosition,
     reconnectAnchorRadius
   );
-  const labelAnchorX = teleportAnchor ? teleportAnchor.x : labelX;
-  const labelAnchorY = teleportAnchor ? teleportAnchor.y - 18 : labelY;
-  const edgeSegments = teleportAnchor
+  const teleportMidpoint = teleportAnchorIn && teleportAnchorOut
+    ? {
+        x: (teleportAnchorIn.x + teleportAnchorOut.x) / 2,
+        y: (teleportAnchorIn.y + teleportAnchorOut.y) / 2,
+      }
+    : null;
+  const labelAnchorX = teleportMidpoint ? teleportMidpoint.x : labelX;
+  const labelAnchorY = teleportMidpoint ? teleportMidpoint.y - 18 : labelY;
+  const edgeSegments = teleportAnchorIn && teleportAnchorOut
     ? [
         {
           id: `${id}-segment-a`,
-          path: `M ${sourceX} ${sourceY} L ${teleportAnchor.x} ${teleportAnchor.y}`,
+          path: `M ${sourceX} ${sourceY} L ${teleportAnchorOut.x} ${teleportAnchorOut.y}`,
           markerEnd: undefined,
         },
         {
           id: `${id}-segment-b`,
-          path: `M ${teleportAnchor.x} ${teleportAnchor.y} L ${targetX} ${targetY}`,
+          path: `M ${teleportAnchorIn.x} ${teleportAnchorIn.y} L ${targetX} ${targetY}`,
           markerEnd,
         },
       ]
@@ -435,6 +445,29 @@ export const TransitionEdge = memo(({
     document.addEventListener('mouseup', handleMouseUp);
   }, [screenToFlowPosition, sourceX, sourceY, targetX, targetY, edgeData, dragOffset]);
 
+  const handleAnchorMouseDown = useCallback((anchorType: 'in' | 'out') => (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    setAnchorDragging(anchorType);
+
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      const flowPosition = screenToFlowPosition({
+        x: moveEvent.clientX,
+        y: moveEvent.clientY,
+      });
+      edgeData?.onUpdateTeleportAnchor?.(anchorType, flowPosition);
+    };
+
+    const handleMouseUp = () => {
+      setAnchorDragging(null);
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  }, [screenToFlowPosition, edgeData]);
+
   // Effect to persist offset on drag end
   useEffect(() => {
     if (!isDragging && dragOffset !== manualCurveOffset) {
@@ -482,19 +515,41 @@ export const TransitionEdge = memo(({
           />
         </>
       )}
-      {teleportAnchor && (
+      {teleportAnchorOut && (
         <EdgeLabelRenderer>
           <div
+            onMouseDown={handleAnchorMouseDown('out')}
             onClick={handleClick}
             className={cn(
               'absolute flex h-6 w-6 items-center justify-center rounded-full border text-[11px] font-semibold pointer-events-auto',
               'bg-background text-primary shadow-sm',
-              isEdgeSelected && 'ring-2 ring-primary ring-offset-2'
+              isEdgeSelected && 'ring-2 ring-primary ring-offset-2',
+              anchorDragging === 'out' ? 'cursor-grabbing' : 'cursor-grab'
             )}
             style={{
-              transform: `translate(-50%, -50%) translate(${teleportAnchor.x}px,${teleportAnchor.y}px)`,
+              transform: `translate(-50%, -50%) translate(${teleportAnchorOut.x}px,${teleportAnchorOut.y}px)`,
             }}
-            title="Teleport anchor"
+            title="Teleport anchor (out)"
+          >
+            ⟲
+          </div>
+        </EdgeLabelRenderer>
+      )}
+      {teleportAnchorIn && (
+        <EdgeLabelRenderer>
+          <div
+            onMouseDown={handleAnchorMouseDown('in')}
+            onClick={handleClick}
+            className={cn(
+              'absolute flex h-6 w-6 items-center justify-center rounded-full border text-[11px] font-semibold pointer-events-auto',
+              'bg-background text-primary shadow-sm',
+              isEdgeSelected && 'ring-2 ring-primary ring-offset-2',
+              anchorDragging === 'in' ? 'cursor-grabbing' : 'cursor-grab'
+            )}
+            style={{
+              transform: `translate(-50%, -50%) translate(${teleportAnchorIn.x}px,${teleportAnchorIn.y}px)`,
+            }}
+            title="Teleport anchor (in)"
           >
             ⟲
           </div>
@@ -518,7 +573,7 @@ export const TransitionEdge = memo(({
         </EdgeLabelRenderer>
       )}
       {/* Draggable control point - shown when selected */}
-      {isEdgeSelected && !isEndTrans && !teleportAnchor && (
+      {isEdgeSelected && !isEndTrans && !(teleportAnchorIn && teleportAnchorOut) && (
         <EdgeLabelRenderer>
           <div
             onMouseDown={handleControlPointMouseDown}
