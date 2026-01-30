@@ -375,12 +375,12 @@ export const TransitionEdge = memo(({
   );
   const teleportLabelAnchor = teleportAnchorIn && teleportAnchorOut
     ? (() => {
-        const dx = targetX - teleportAnchorIn.x;
-        const dy = targetY - teleportAnchorIn.y;
+        const dx = targetX - teleportAnchorOut.x;
+        const dy = targetY - teleportAnchorOut.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
         const t = 0.4;
-        const baseX = teleportAnchorIn.x + dx * t;
-        const baseY = teleportAnchorIn.y + dy * t;
+        const baseX = teleportAnchorOut.x + dx * t;
+        const baseY = teleportAnchorOut.y + dy * t;
 
         if (distance < 1) {
           return { x: baseX, y: baseY };
@@ -401,12 +401,12 @@ export const TransitionEdge = memo(({
     ? [
         {
           id: `${id}-segment-a`,
-          path: `M ${sourceX} ${sourceY} L ${teleportAnchorOut.x} ${teleportAnchorOut.y}`,
+          path: `M ${sourceX} ${sourceY} L ${teleportAnchorIn.x} ${teleportAnchorIn.y}`,
           markerEnd: undefined,
         },
         {
           id: `${id}-segment-b`,
-          path: `M ${teleportAnchorIn.x} ${teleportAnchorIn.y} L ${targetX} ${targetY}`,
+          path: `M ${teleportAnchorOut.x} ${teleportAnchorOut.y} L ${targetX} ${targetY}`,
           markerEnd,
         },
       ]
