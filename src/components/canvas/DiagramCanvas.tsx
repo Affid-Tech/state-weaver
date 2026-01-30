@@ -369,6 +369,7 @@ function DiagramCanvasInner() {
         selectElement(transitionId, 'transition');
       } else if (isEndNode) {
         // Auto-create transition without dialog - end transitions have no properties
+        const endTopicKind = targetState?.systemNodeType === 'TopicEnd' ? 'positive' : undefined;
         const transitionId = addTransition(
           project.selectedTopicId,
           params.source,
@@ -376,7 +377,11 @@ function DiagramCanvasInner() {
           '', // Empty messageType for end transitions
           'B2B', // Default flowType (not used for end transitions)
           params.sourceHandle || 'source-bottom',
-          params.targetHandle || 'target-top'
+          params.targetHandle || 'target-top',
+          undefined,
+          undefined,
+          undefined,
+          endTopicKind
         );
         selectElement(transitionId, 'transition');
       } else if (isSourceFork) {

@@ -11,7 +11,8 @@ import type {
   Transition, 
   TopicKind,
   FlowType,
-  Position 
+  Position,
+  TopicEndKind 
 } from '@/types/diagram';
 import { deriveTransitionKind, getTopicEndKind } from '@/types/diagram';
 import type { FieldConfig } from '@/types/fieldConfig';
@@ -59,7 +60,19 @@ export interface DiagramState {
   updateStatePosition: (topicId: string, stateId: string, position: Position) => void;
   
   // Transition actions
-  addTransition: (topicId: string, from: string, to: string, messageType?: string, flowType?: FlowType, sourceHandleId?: string, targetHandleId?: string, revision?: string, instrument?: string, topic?: string) => string;
+  addTransition: (
+    topicId: string,
+    from: string,
+    to: string,
+    messageType?: string,
+    flowType?: FlowType,
+    sourceHandleId?: string,
+    targetHandleId?: string,
+    revision?: string,
+    instrument?: string,
+    topic?: string,
+    endTopicKind?: TopicEndKind
+  ) => string;
   updateTransition: (topicId: string, transitionId: string, updates: Partial<Omit<Transition, 'kind'>>) => void;
   deleteTransition: (topicId: string, transitionId: string) => void;
   updateTransitionRouting: (topicId: string, transitionId: string, sourceHandleId?: string, targetHandleId?: string, curveOffset?: number) => void;
@@ -128,6 +141,11 @@ const normalizeTopicEndMarkers = (projects: DiagramProject[]) => {
             state.topicEndKind = state.topicEndKind ?? 'positive';
           }
           delete (state as { isTopicEnd?: boolean }).isTopicEnd;
+        }
+      });
+      topicData.transitions.forEach((transition) => {
+        if (transition.kind === 'endTopic' && transition.endTopicKind == null) {
+          transition.endTopicKind = 'positive';
         }
       });
     });
@@ -498,7 +516,7 @@ export const useDiagramStore = create<DiagramState>()(
           }
         }),
         
-        addTransition: (topicId, from, to, messageType, flowType, sourceHandleId, targetHandleId, revision, instrument, topic) => {
+        addTransition: (topicId, from, to, messageType, flowType, sourceHandleId, targetHandleId, revision, instrument, topic, endTopicKind) => {
           const transitionId = uuidv4();
           set((state) => {
             const project = state.projects.find(p => p.id === state.activeProjectId);
@@ -510,6 +528,9 @@ export const useDiagramStore = create<DiagramState>()(
               const toState = topicData.states.find(s => s.id === to);
               const kind = deriveTransitionKind(fromState, toState);
               const isRoutingOnly = toState?.systemNodeType === 'Fork';
+              const resolvedEndTopicKind = kind === 'endTopic'
+                ? endTopicKind ?? 'positive'
+                : undefined;
               
               topicData.transitions.push({
                 id: transitionId,
@@ -517,6 +538,7 @@ export const useDiagramStore = create<DiagramState>()(
                 to,
                 kind,
                 isRoutingOnly,
+                endTopicKind: resolvedEndTopicKind,
                 messageType: isRoutingOnly ? undefined : messageType,
                 flowType: isRoutingOnly ? undefined : flowType,
                 sourceHandleId,
@@ -548,6 +570,9 @@ export const useDiagramStore = create<DiagramState>()(
                 const toState = topicData.states.find(s => s.id === transition.to);
                 transition.kind = deriveTransitionKind(fromState, toState);
                 transition.isRoutingOnly = toState?.systemNodeType === 'Fork';
+                if (transition.kind === 'endTopic' && transition.endTopicKind == null) {
+                  transition.endTopicKind = 'positive';
+                }
                 if (transition.isRoutingOnly) {
                   transition.messageType = undefined;
                   transition.flowType = undefined;
