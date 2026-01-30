@@ -104,6 +104,7 @@ function DiagramCanvasInner() {
   const deleteState = useDiagramStore(s => s.deleteState);
   const updateStatePosition = useDiagramStore(s => s.updateStatePosition);
   const addState = useDiagramStore(s => s.addState);
+  const addFork = useDiagramStore(s => s.addFork);
 
   const [pendingConnection, setPendingConnection] = useState<PendingConnection | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
@@ -343,6 +344,15 @@ function DiagramCanvasInner() {
     setNewStateDialogOpen(false);
   }, [project?.selectedTopicId, addState, newStatePosition]);
 
+  const handleContextMenuNewFork = useCallback((e: React.MouseEvent) => {
+    if (!project?.selectedTopicId) return;
+    const position = screenToFlowPosition({
+      x: e.clientX,
+      y: e.clientY,
+    });
+    addFork(project.selectedTopicId, position);
+  }, [project?.selectedTopicId, addFork, screenToFlowPosition]);
+
   // Handle edge reconnection (detach and reattach to different nodes)
   const onReconnect = useCallback(
     (oldEdge: Edge, newConnection: Connection) => {
@@ -453,6 +463,10 @@ function DiagramCanvasInner() {
           <ContextMenuItem onClick={handleContextMenuNewState}>
             <Plus className="h-4 w-4 mr-2" />
             New State
+          </ContextMenuItem>
+          <ContextMenuItem onClick={handleContextMenuNewFork}>
+            <Plus className="h-4 w-4 mr-2" />
+            New Fork
           </ContextMenuItem>
         </ContextMenuContent>
       </ContextMenu>

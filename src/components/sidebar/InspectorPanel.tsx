@@ -48,6 +48,7 @@ export function InspectorPanel() {
   const addState = useDiagramStore(s => s.addState);
   const addInstrumentEnd = useDiagramStore(s => s.addInstrumentEnd);
   const addTopicEnd = useDiagramStore(s => s.addTopicEnd);
+  const addFork = useDiagramStore(s => s.addFork);
   const updateState = useDiagramStore(s => s.updateState);
   const deleteState = useDiagramStore(s => s.deleteState);
   const updateTransition = useDiagramStore(s => s.updateTransition);
@@ -97,6 +98,8 @@ export function InspectorPanel() {
   const canDeleteSelectedState = useMemo(() => {
     if (!selectedState) return false;
     if (!selectedState.isSystemNode) return true;
+
+    if (selectedState.systemNodeType === 'Fork') return true;
     
     // TopicEnd can NEVER be deleted - topic must always have a proper end
     if (selectedState.systemNodeType === 'TopicEnd') return false;
@@ -128,6 +131,11 @@ export function InspectorPanel() {
   const handleAddTopicEnd = () => {
     if (!project?.selectedTopicId) return;
     addTopicEnd(project.selectedTopicId);
+  };
+
+  const handleAddFork = () => {
+    if (!project?.selectedTopicId) return;
+    addFork(project.selectedTopicId);
   };
 
   const handleDeleteState = () => {
@@ -227,6 +235,16 @@ export function InspectorPanel() {
                 Add Topic End
               </Button>
             )}
+
+            <Button 
+              variant="outline" 
+              className="w-full" 
+              disabled={!project.selectedTopicId}
+              onClick={handleAddFork}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add Fork
+            </Button>
           </div>
 
           <ScrollArea className="flex-1">
@@ -270,7 +288,7 @@ export function InspectorPanel() {
                     />
                   </div>
 
-                  {selectedState.isSystemNode && (
+                  {selectedState.isSystemNode && !canDeleteSelectedState && (
                     <p className="text-sm text-muted-foreground">
                       System nodes cannot be edited or deleted.
                     </p>

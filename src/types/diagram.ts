@@ -15,11 +15,12 @@ export type SystemNodeType =
   | 'TopicStart' 
   | 'TopicEnd' 
   | 'NewInstrument' 
-  | 'InstrumentEnd';
+  | 'InstrumentEnd'
+  | 'Fork';
 
 export const RESERVED_NODE_NAMES = [
   'Start', 'End', 'NewInstrument', 'InstrumentEnd', 'NewTopicIn', 'NewTopicOut', 
-  'TopicStart', 'TopicEnd'
+  'TopicStart', 'TopicEnd', 'Fork'
 ] as const;
 
 export interface Position {
