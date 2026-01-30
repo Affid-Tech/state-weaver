@@ -1,6 +1,6 @@
 import { memo, useCallback, useState } from 'react';
 import { Handle, Position } from '@xyflow/react';
-import { Lock, Repeat } from 'lucide-react';
+import { Check, CircleX, Lock, Repeat } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { StateNode } from '@/types/diagram';
 
@@ -49,6 +49,9 @@ export const StateNodeComponent = memo(({ data, id }: StateNodeProps) => {
   const isEnd = state.systemNodeType === 'TopicEnd'
     || state.systemNodeType === 'InstrumentEnd';
   const isFork = state.systemNodeType === 'Fork';
+  const topicEndKind = Object.prototype.hasOwnProperty.call(state, 'topicEndKind')
+    ? (state.topicEndKind ?? 'positive')
+    : undefined;
 
   // Show handles on hover, selection, or during connection
   const showHandles = isHovered || isSelected || isConnecting;
@@ -186,6 +189,21 @@ export const StateNodeComponent = memo(({ data, id }: StateNodeProps) => {
           title="Has self-loop transitions"
         >
           <Repeat className="h-3 w-3" />
+        </div>
+      )}
+
+      {!isFork && topicEndKind && (
+        <div
+          className="absolute top-1 left-1 rounded-full bg-background/80 p-0.5 text-muted-foreground"
+          role="img"
+          aria-label={`Topic end: ${topicEndKind}`}
+          title={`Topic end: ${topicEndKind}`}
+        >
+          {topicEndKind === 'positive' ? (
+            <Check className="h-3 w-3" />
+          ) : (
+            <CircleX className="h-3 w-3" />
+          )}
         </div>
       )}
       
