@@ -146,6 +146,13 @@ function DiagramCanvasInner() {
 
   const initialNodes: Node[] = useMemo(() => {
     if (!selectedTopicData) return [];
+    const selfLoopLookup = new Map<string, boolean>();
+    selectedTopicData.transitions.forEach((transition) => {
+      if (transitionVisibility[transition.id] === false) return;
+      if (transition.from === transition.to) {
+        selfLoopLookup.set(transition.from, true);
+      }
+    });
     return selectedTopicData.states.map((state) => ({
       id: state.id,
       type: 'stateNode',
@@ -154,10 +161,11 @@ function DiagramCanvasInner() {
         state,
         isSelected: selectedElementId === state.id && selectedElementType === 'state',
         isConnecting,
+        hasSelfLoops: selfLoopLookup.get(state.id) ?? false,
         onSelect: handleNodeSelect,
       },
     }));
-  }, [selectedTopicData, selectedElementId, selectedElementType, handleNodeSelect, isConnecting]);
+  }, [selectedTopicData, selectedElementId, selectedElementType, handleNodeSelect, isConnecting, transitionVisibility]);
 
   // Compute edge indices for proper offset rendering
   const edgeIndices = useMemo(() => {
