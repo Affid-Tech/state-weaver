@@ -135,3 +135,10 @@ export function deriveTransitionKind(
   
   return 'normal';
 }
+
+export function isRoutingOnlyTransition(transition: Transition, toState?: StateNode): boolean {
+  if (toState) {
+    return toState.systemNodeType === 'Fork';
+  }
+  return transition.isRoutingOnly ?? false;
+}

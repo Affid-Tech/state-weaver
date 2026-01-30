@@ -243,10 +243,11 @@ function DiagramCanvasInner() {
       const targetState = selectedTopicData.states.find(s => s.id === params.target);
       const sourceState = selectedTopicData.states.find(s => s.id === params.source);
       const isEndNode = targetState?.systemNodeType === 'TopicEnd' || targetState?.systemNodeType === 'InstrumentEnd';
-      const isForkTransition = sourceState?.systemNodeType === 'Fork' || targetState?.systemNodeType === 'Fork';
+      const isTargetFork = targetState?.systemNodeType === 'Fork';
+      const isSourceFork = sourceState?.systemNodeType === 'Fork';
       
-      if (isForkTransition) {
-        // Auto-create transition without dialog - fork transitions are routing-only
+      if (isTargetFork) {
+        // Auto-create transition without dialog - incoming fork transitions are routing-only
         const transitionId = addTransition(
           project.selectedTopicId,
           params.source,
@@ -269,6 +270,14 @@ function DiagramCanvasInner() {
           params.targetHandle || 'target-top'
         );
         selectElement(transitionId, 'transition');
+      } else if (isSourceFork) {
+        // Always prompt for outgoing fork transitions
+        setPendingConnection({ 
+          source: params.source, 
+          target: params.target,
+          sourceHandle: params.sourceHandle || 'source-bottom',
+          targetHandle: params.targetHandle || 'target-top',
+        });
       } else {
         // Open dialog to collect transition details
         setPendingConnection({ 

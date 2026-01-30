@@ -6,7 +6,8 @@ import {
   useReactFlow,
 } from '@xyflow/react';
 import { cn } from '@/lib/utils';
-import type { Transition, TransitionKind } from '@/types/diagram';
+import type { StateNode, Transition, TransitionKind } from '@/types/diagram';
+import { isRoutingOnlyTransition } from '@/types/diagram';
 
 interface TransitionEdgeData {
   transition: Transition;
@@ -38,10 +39,6 @@ const HANDLE_DIRECTIONS: Record<string, { x: number; y: number }> = {
 function getTransitionLabel(transition: Transition): string {
   // No label for end transitions
   if (transition.kind === 'endTopic' || transition.kind === 'endInstrument') {
-    return '';
-  }
-
-  if (transition.isRoutingOnly) {
     return '';
   }
 
@@ -318,12 +315,10 @@ export const TransitionEdge = memo(({
     targetHandleId
   );
 
-  const sourceNode = getNode(source);
   const targetNode = getNode(target);
-  const isForkTransition = transition?.isRoutingOnly
-    || sourceNode?.data?.state?.systemNodeType === 'Fork'
-    || targetNode?.data?.state?.systemNodeType === 'Fork';
-  const label = transition && !isForkTransition ? getTransitionLabel(transition) : '';
+  const targetState = targetNode?.data?.state as StateNode | undefined;
+  const isIncomingToFork = transition ? isRoutingOnlyTransition(transition, targetState) : false;
+  const label = transition && !isIncomingToFork ? getTransitionLabel(transition) : '';
   const isEndTrans = transition ? isEndTransition(transition.kind) : false;
 
   const handleClick = (e: React.MouseEvent) => {
