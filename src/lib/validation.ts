@@ -174,8 +174,8 @@ function validateTopic(topicData: TopicData, instrumentType: string, fieldConfig
   if (!hasEndTransition) {
     issues.push({
       id: uuidv4(),
-      level: 'error',
-      message: `Topic "${topic.id}" must have at least one path to TopicEnd`,
+      level: 'warning',
+      message: `Topic "${topic.id}" should have at least one path to TopicEnd`,
       topicId: topic.id,
     });
   }

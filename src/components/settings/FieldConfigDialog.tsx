@@ -1,21 +1,14 @@
-import { useState, useRef } from 'react';
-import { Plus, Trash2, Upload, Download } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import { useDiagramStore } from '@/store/diagramStore';
-import { toast } from 'sonner';
-import { isValidEnumName } from '@/lib/validation';
-import type { FieldConfig } from '@/types/fieldConfig';
+import {useState} from 'react';
+import {Plus, Trash2} from 'lucide-react';
+import {Button} from '@/components/ui/button';
+import {Input} from '@/components/ui/input';
+import {Tabs, TabsContent, TabsList, TabsTrigger} from '@/components/ui/tabs';
+import {ScrollArea} from '@/components/ui/scroll-area';
+import {Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,} from '@/components/ui/dialog';
+import {useDiagramStore} from '@/store/diagramStore';
+import {toast} from 'sonner';
+import {isValidEnumName} from '@/lib/validation';
+import {FieldConfig} from '@/types/fieldConfig';
 
 interface FieldConfigDialogProps {
   open: boolean;
@@ -41,7 +34,6 @@ export function FieldConfigDialog({ open, onOpenChange }: FieldConfigDialogProps
     messageTypes: '',
     flowTypes: '',
   });
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleAddValue = (field: FieldKey) => {
     const value = newValues[field].trim();
@@ -69,61 +61,8 @@ export function FieldConfigDialog({ open, onOpenChange }: FieldConfigDialogProps
     });
   };
 
-  const handleExportConfig = () => {
-    const json = JSON.stringify(fieldConfig, null, 2);
-    const blob = new Blob([json], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'field-config.json';
-    a.click();
-    URL.revokeObjectURL(url);
-    toast.success('Configuration exported');
-  };
-
-  const handleImportConfig = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      try {
-        const config = JSON.parse(event.target?.result as string) as Partial<FieldConfig>;
-        
-        // Validate all values in imported config
-        let hasInvalidValues = false;
-        const validatedConfig: Partial<FieldConfig> = {};
-        
-        for (const [key, values] of Object.entries(config)) {
-          if (Array.isArray(values)) {
-            const validValues = values.filter((v: string) => {
-              if (!isValidEnumName(v)) {
-                hasInvalidValues = true;
-                return false;
-              }
-              return true;
-            });
-            validatedConfig[key as FieldKey] = validValues;
-          }
-        }
-        
-        updateFieldConfig(validatedConfig);
-        
-        if (hasInvalidValues) {
-          toast.warning('Configuration imported with some invalid values removed');
-        } else {
-          toast.success('Configuration imported');
-        }
-      } catch {
-        toast.error('Invalid configuration file');
-      }
-    };
-    reader.readAsText(file);
-    e.target.value = '';
-  };
-
   const renderFieldTab = (field: FieldKey) => (
-    <TabsContent value={field} className="mt-0 flex-1 flex flex-col">
+    <TabsContent key={field} value={field} className="mt-0 flex-1 flex flex-col">
       <ScrollArea className="flex-1 max-h-64">
         <div className="space-y-2 p-1">
           {fieldConfig[field].length === 0 ? (
@@ -171,7 +110,7 @@ export function FieldConfigDialog({ open, onOpenChange }: FieldConfigDialogProps
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>Field Configuration</DialogTitle>
           <DialogDescription>
@@ -182,38 +121,23 @@ export function FieldConfigDialog({ open, onOpenChange }: FieldConfigDialogProps
 
         <Tabs defaultValue="revisions" className="flex flex-col">
           <TabsList className="grid grid-cols-5 mb-4">
-            <TabsTrigger value="revisions" className="text-xs px-2">Rev</TabsTrigger>
-            <TabsTrigger value="instrumentTypes" className="text-xs px-2">Instr</TabsTrigger>
-            <TabsTrigger value="topicTypes" className="text-xs px-2">Topic</TabsTrigger>
-            <TabsTrigger value="messageTypes" className="text-xs px-2">Msg</TabsTrigger>
-            <TabsTrigger value="flowTypes" className="text-xs px-2">Flow</TabsTrigger>
+            <>
+              {(Object.keys(FIELD_LABELS) as FieldKey[]).map((tab) => {
+                return (
+                    <TabsTrigger key={tab} value={tab.toString()} className="text-xs px-2">{FIELD_LABELS[tab]}</TabsTrigger>
+                );
+              })}
+            </>
           </TabsList>
 
-          {renderFieldTab('revisions')}
-          {renderFieldTab('instrumentTypes')}
-          {renderFieldTab('topicTypes')}
-          {renderFieldTab('messageTypes')}
-          {renderFieldTab('flowTypes')}
+          <>
+            {(Object.keys(FIELD_LABELS) as FieldKey[]).map((tab) => {
+              return renderFieldTab(tab)
+            })}
+          </>
         </Tabs>
 
-        <div className="flex justify-between pt-4 border-t mt-4">
-          <div className="flex gap-2">
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".json"
-              onChange={handleImportConfig}
-              className="hidden"
-            />
-            <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
-              <Upload className="h-4 w-4 mr-2" />
-              Import
-            </Button>
-            <Button variant="outline" size="sm" onClick={handleExportConfig}>
-              <Download className="h-4 w-4 mr-2" />
-              Export
-            </Button>
-          </div>
+        <div className="flex justify-end pt-4 border-t mt-4">
           <Button onClick={() => onOpenChange(false)}>Done</Button>
         </div>
       </DialogContent>

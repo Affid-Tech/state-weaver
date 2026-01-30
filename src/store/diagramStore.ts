@@ -17,7 +17,7 @@ import { deriveTransitionKind } from '@/types/diagram';
 import type { FieldConfig } from '@/types/fieldConfig';
 import { DEFAULT_FIELD_CONFIG } from '@/types/fieldConfig';
 
-interface DiagramState {
+export interface DiagramState {
   // Multi-project workspace
   projects: DiagramProject[];
   activeProjectId: string | null;
@@ -72,7 +72,9 @@ interface DiagramState {
   updateFieldConfig: (config: Partial<FieldConfig>) => void;
   
   // Import/Export
+  exportInstrument: () => string;
   exportProject: () => string;
+  importInstrument: (json: string) => boolean;
   importProject: (json: string) => boolean;
   resetProject: () => void;
   
@@ -533,13 +535,22 @@ export const useDiagramStore = create<DiagramState>()(
           Object.assign(state.fieldConfig, config);
         }),
         
-        exportProject: () => {
+        exportInstrument: () => {
           const state = get();
           const project = state.projects.find(p => p.id === state.activeProjectId);
           return project ? JSON.stringify(project, null, 2) : '';
         },
+
+        exportProject: () => {
+          const stateForExport = {...get()}
+          stateForExport.viewMode = "topic"
+          stateForExport.activeProjectId = null;
+          stateForExport.selectedElementId = null;
+          stateForExport.selectedElementType = null;
+          return JSON.stringify(stateForExport, null, 2);
+        },
         
-        importProject: (json) => {
+        importInstrument: (json) => {
           try {
             const project = JSON.parse(json) as DiagramProject;
             // Give it a new ID to avoid conflicts
@@ -549,6 +560,25 @@ export const useDiagramStore = create<DiagramState>()(
             set((state) => {
               state.projects.push(project);
               state.activeProjectId = project.id;
+              state.selectedElementId = null;
+              state.selectedElementType = null;
+            });
+            return true;
+          } catch {
+            return false;
+          }
+        },
+
+        importProject: (json) => {
+          try {
+            const newState = JSON.parse(json) as DiagramState;
+            // Give it a new ID to avoid conflicts
+
+            set((state) => {
+              state.projects = newState.projects;
+              state.fieldConfig = newState.fieldConfig;
+              state.viewMode = "topic";
+              state.activeProjectId = null;
               state.selectedElementId = null;
               state.selectedElementType = null;
             });
@@ -568,7 +598,7 @@ export const useDiagramStore = create<DiagramState>()(
       };
     }),
     {
-      name: 'diagram-workspace', // Fresh key to avoid old corrupted state
+      name: 'diagram-workspace',
       partialize: (state) => ({
         projects: state.projects,
         activeProjectId: state.activeProjectId,

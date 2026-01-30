@@ -16,6 +16,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
+import {ScrollArea} from "@/components/ui/scroll-area.tsx";
 
 interface ComboboxProps {
   value: string;
