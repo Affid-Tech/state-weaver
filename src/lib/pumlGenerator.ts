@@ -162,9 +162,17 @@ export function generateTopicPuml(project: DiagramProject, topicId: string): str
   const { instrument } = project;
   const { topic, states } = topicData;
   const renderTransitions = getTopicRenderTransitions(topicData, instrument);
+  const isRootTopic = topic.kind === 'root';
   const markedTopicEnds = states.filter((state) => getTopicEndKind(state) && !state.isSystemNode);
+  const positiveMarkedTopicEnds = isRootTopic
+    ? markedTopicEnds.filter((state) => getTopicEndKind(state) !== 'negative')
+    : markedTopicEnds;
+  const negativeMarkedTopicEnds = isRootTopic
+    ? markedTopicEnds.filter((state) => getTopicEndKind(state) === 'negative')
+    : [];
   const hasTopicEndNode = states.some((state) => state.systemNodeType === 'TopicEnd');
-  const hasSyntheticTopicEnd = !hasTopicEndNode && markedTopicEnds.length > 0;
+  const hasSyntheticTopicEnd = !hasTopicEndNode && positiveMarkedTopicEnds.length > 0;
+  const hasNegativeRootTopicEnds = negativeMarkedTopicEnds.length > 0;
 
   const lines: string[] = [];
   lines.push('@startuml');
@@ -180,7 +188,7 @@ export function generateTopicPuml(project: DiagramProject, topicId: string): str
   
   // Declare top-level states first (outside any container)
   const hasNewInstrument = states.some(s => s.systemNodeType === 'NewInstrument');
-  const hasInstrumentEnd = states.some(s => s.systemNodeType === 'InstrumentEnd');
+  const hasInstrumentEnd = states.some(s => s.systemNodeType === 'InstrumentEnd') || hasNegativeRootTopicEnds;
   
   if (hasNewInstrument) {
     lines.push(`state NewInstrument <<start>>`);
@@ -261,10 +269,14 @@ export function generateTopicPuml(project: DiagramProject, topicId: string): str
       lines.push(`${fromAlias} --> ${toAlias}`);
     }
   });
-  markedTopicEnds.forEach((state) => {
+  positiveMarkedTopicEnds.forEach((state) => {
     const stateAlias = `${instrument.type}.${topic.id}.${getStateEnumId(state)}`;
     const endAlias = `${instrument.type}.${topic.id}.End`;
     lines.push(`${stateAlias} --> ${endAlias}`);
+  });
+  negativeMarkedTopicEnds.forEach((state) => {
+    const stateAlias = `${instrument.type}.${topic.id}.${getStateEnumId(state)}`;
+    lines.push(`${stateAlias} --> EndInstrument`);
   });
   lines.push('');
 
@@ -280,6 +292,9 @@ export function generateAggregatePuml(project: DiagramProject): string | null {
   const { instrument } = project;
   const normalTopics = project.topics.filter(t => t.topic.kind === 'normal');
   const hasNormalTopics = normalTopics.length > 0;
+  const hasNegativeRootTopicEnds = rootTopics.some((rootTopic) =>
+    rootTopic.states.some((state) => getTopicEndKind(state) === 'negative')
+  );
   
   // Check if any topic has a transition to InstrumentEnd
   const hasInstrumentEndTransitions = project.topics.some(topicData => 
@@ -287,7 +302,7 @@ export function generateAggregatePuml(project: DiagramProject): string | null {
       const toState = topicData.states.find(s => s.id === t.to);
       return toState?.systemNodeType === 'InstrumentEnd';
     })
-  );
+  ) || hasNegativeRootTopicEnds;
   const expandedTransitionsByTopicId = new Map<string, RenderTransition[]>();
   const getExpandedTransitions = (topicData: TopicData) => {
     const existing = expandedTransitionsByTopicId.get(topicData.topic.id);
@@ -319,10 +334,16 @@ export function generateAggregatePuml(project: DiagramProject): string | null {
     const rootMarkedTopicEnds = rootTopic.states.filter(
       (state) => getTopicEndKind(state) && !state.isSystemNode
     );
+    const rootPositiveMarkedTopicEnds = rootMarkedTopicEnds.filter(
+      (state) => getTopicEndKind(state) !== 'negative'
+    );
+    const rootNegativeMarkedTopicEnds = rootMarkedTopicEnds.filter(
+      (state) => getTopicEndKind(state) === 'negative'
+    );
     const rootHasTopicEndNode = rootTopic.states.some(
       (state) => state.systemNodeType === 'TopicEnd'
     );
-    const rootHasSyntheticTopicEnd = !rootHasTopicEndNode && rootMarkedTopicEnds.length > 0;
+    const rootHasSyntheticTopicEnd = !rootHasTopicEndNode && rootPositiveMarkedTopicEnds.length > 0;
     lines.push(`  state "${rootTopic.topic.label || rootTopic.topic.id}" as ${rootId} {`);
     rootTopic.states.forEach((state) => {
       if (state.systemNodeType === 'NewInstrument') {
@@ -367,9 +388,13 @@ export function generateAggregatePuml(project: DiagramProject): string | null {
         lines.push(`    ${fromAlias} --> ${toAlias}`);
       }
     });
-    rootMarkedTopicEnds.forEach((state) => {
+    rootPositiveMarkedTopicEnds.forEach((state) => {
       const stateEnumId = getStateEnumId(state);
       lines.push(`    ${rootId}.${stateEnumId} --> ${rootId}.End`);
+    });
+    rootNegativeMarkedTopicEnds.forEach((state) => {
+      const stateEnumId = getStateEnumId(state);
+      lines.push(`    ${rootId}.${stateEnumId} --> EndInstrument`);
     });
     lines.push('  }');
     lines.push('');
@@ -498,11 +523,14 @@ export function generateAggregatePuml(project: DiagramProject): string | null {
   if (hasNormalTopics) {
     rootTopics.forEach((rootTopic) => {
       const rootId = `${instrument.type}.${rootTopic.topic.id}`;
-      rootTopic.states
-        .filter((state) => isTopicEndState(state))
-        .forEach((state) => {
-          lines.push(`${rootId}.End --> ${instrument.type}_NewTopic_Out`);
-        });
+      const hasPositiveEnds = rootTopic.states.some((state) => {
+        if (state.systemNodeType === 'TopicEnd') return true;
+        if (getTopicEndKind(state) === 'negative') return false;
+        return getTopicEndKind(state) !== undefined;
+      });
+      if (hasPositiveEnds) {
+        lines.push(`${rootId}.End --> ${instrument.type}_NewTopic_Out`);
+      }
     });
     lines.push('');
   }
