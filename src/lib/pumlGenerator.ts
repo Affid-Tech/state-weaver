@@ -94,12 +94,71 @@ function getTransitionLabel(
   return parts.join(' ');
 }
 
+type RenderTransition = {
+  from: string;
+  to: string;
+  label: string;
+};
+
+function expandForkTransitions(
+  states: StateNode[],
+  transitions: Transition[],
+  getLabel: (transition: Transition, toState?: StateNode) => string
+): RenderTransition[] {
+  const forkIds = new Set(states.filter(state => state.systemNodeType === 'Fork').map(state => state.id));
+  const expandedTransitions: RenderTransition[] = [];
+  const dedupe = new Set<string>();
+
+  const findState = (stateId: string) => states.find(state => state.id === stateId);
+  const addTransition = (from: string, to: string, label: string) => {
+    if (forkIds.has(from) || forkIds.has(to)) return;
+    const key = `${from}::${to}::${label}`;
+    if (dedupe.has(key)) return;
+    dedupe.add(key);
+    expandedTransitions.push({ from, to, label });
+  };
+
+  transitions
+    .filter(transition => !forkIds.has(transition.from) && !forkIds.has(transition.to))
+    .forEach((transition) => {
+      const toState = findState(transition.to);
+      addTransition(transition.from, transition.to, getLabel(transition, toState));
+    });
+
+  forkIds.forEach((forkId) => {
+    const incoming = transitions.filter(transition => transition.to === forkId);
+    const outgoing = transitions.filter(transition => transition.from === forkId);
+
+    incoming.forEach((incomingTransition) => {
+      outgoing.forEach((outgoingTransition) => {
+        const toState = findState(outgoingTransition.to);
+        addTransition(
+          incomingTransition.from,
+          outgoingTransition.to,
+          getLabel(outgoingTransition, toState)
+        );
+      });
+    });
+  });
+
+  return expandedTransitions;
+}
+
+function getTopicRenderTransitions(topicData: TopicData, instrument: Instrument): RenderTransition[] {
+  return expandForkTransitions(
+    topicData.states,
+    topicData.transitions,
+    (transition, toState) => getTransitionLabel(transition, instrument, topicData.topic, toState)
+  );
+}
+
 export function generateTopicPuml(project: DiagramProject, topicId: string): string | null {
   const topicData = project.topics.find(t => t.topic.id === topicId);
   if (!topicData) return null;
 
   const { instrument } = project;
-  const { topic, states, transitions } = topicData;
+  const { topic, states } = topicData;
+  const renderTransitions = getTopicRenderTransitions(topicData, instrument);
 
   const lines: string[] = [];
   lines.push('@startuml');
@@ -134,6 +193,8 @@ export function generateTopicPuml(project: DiagramProject, topicId: string): str
     
     if (state.systemNodeType === 'NewInstrument') {
       // Already declared at top level
+    } else if (state.systemNodeType === 'Fork') {
+      // Skip fork nodes (expanded in transitions)
     } else if (state.systemNodeType === 'TopicStart') {
       lines.push(`state ${instrument.type}.${topic.id}.Start as "Topic Start" <<entryPoint>>`);
     } else if (state.systemNodeType === 'TopicEnd') {
@@ -150,7 +211,7 @@ export function generateTopicPuml(project: DiagramProject, topicId: string): str
 
   // Transitions
   lines.push(`' --- Transitions ---`);
-  transitions.forEach((transition) => {
+  renderTransitions.forEach((transition) => {
     const fromState = states.find(s => s.id === transition.from);
     const toState = states.find(s => s.id === transition.to);
     
@@ -185,9 +246,8 @@ export function generateTopicPuml(project: DiagramProject, topicId: string): str
       toAlias = `${instrument.type}.${topic.id}.${transition.to}`;
     }
     
-    const label = getTransitionLabel(transition, instrument, topic, toState);
-    if (label) {
-      lines.push(`${fromAlias} --> ${toAlias} : ${label}`);
+    if (transition.label) {
+      lines.push(`${fromAlias} --> ${toAlias} : ${transition.label}`);
     } else {
       lines.push(`${fromAlias} --> ${toAlias}`);
     }
@@ -214,6 +274,14 @@ export function generateAggregatePuml(project: DiagramProject): string | null {
       return toState?.systemNodeType === 'InstrumentEnd';
     })
   );
+  const expandedTransitionsByTopicId = new Map<string, RenderTransition[]>();
+  const getExpandedTransitions = (topicData: TopicData) => {
+    const existing = expandedTransitionsByTopicId.get(topicData.topic.id);
+    if (existing) return existing;
+    const expanded = getTopicRenderTransitions(topicData, instrument);
+    expandedTransitionsByTopicId.set(topicData.topic.id, expanded);
+    return expanded;
+  };
 
   const lines: string[] = [];
   lines.push('@startuml');
@@ -238,6 +306,8 @@ export function generateAggregatePuml(project: DiagramProject): string | null {
     rootTopic.states.forEach((state) => {
       if (state.systemNodeType === 'NewInstrument') {
         // Skip, declared at top level
+      } else if (state.systemNodeType === 'Fork') {
+        // Skip fork nodes (expanded in transitions)
       } else if (state.systemNodeType === 'TopicEnd') {
         lines.push(`    state ${rootId}.End as "Topic End" <<exitPoint>>`);
       } else if (state.systemNodeType === 'InstrumentEnd') {
@@ -252,7 +322,7 @@ export function generateAggregatePuml(project: DiagramProject): string | null {
     lines.push('');
     
     // Transitions within root topic (excluding connections to NewInstrument - handled externally)
-    rootTopic.transitions.forEach((transition) => {
+    getExpandedTransitions(rootTopic).forEach((transition) => {
       const fromState = rootTopic.states.find(s => s.id === transition.from);
       const toState = rootTopic.states.find(s => s.id === transition.to);
       
@@ -267,9 +337,8 @@ export function generateAggregatePuml(project: DiagramProject): string | null {
           ? 'EndInstrument'
           : `${rootId}.${toState ? getStateEnumId(toState) : transition.to}`;
       
-      const label = getTransitionLabel(transition, instrument, rootTopic.topic, toState);
-      if (label) {
-        lines.push(`    ${fromAlias} --> ${toAlias} : ${label}`);
+      if (transition.label) {
+        lines.push(`    ${fromAlias} --> ${toAlias} : ${transition.label}`);
       } else {
         lines.push(`    ${fromAlias} --> ${toAlias}`);
       }
@@ -293,6 +362,8 @@ export function generateAggregatePuml(project: DiagramProject): string | null {
     topicData.states.forEach((state) => {
       if (state.systemNodeType === 'TopicStart') {
         lines.push(`    state ${topicAlias}.Start as "Topic Start" <<entryPoint>>`);
+      } else if (state.systemNodeType === 'Fork') {
+        // Skip fork nodes (expanded in transitions)
       } else if (state.systemNodeType === 'TopicEnd') {
         lines.push(`    state ${topicAlias}.End as "Topic End" <<exitPoint>>`);
       } else if (state.systemNodeType === 'InstrumentEnd') {
@@ -305,7 +376,7 @@ export function generateAggregatePuml(project: DiagramProject): string | null {
       }
     });
     lines.push('');
-    topicData.transitions.forEach((transition) => {
+    getExpandedTransitions(topicData).forEach((transition) => {
       const fromState = topicData.states.find(s => s.id === transition.from);
       const toState = topicData.states.find(s => s.id === transition.to);
       
@@ -318,9 +389,8 @@ export function generateAggregatePuml(project: DiagramProject): string | null {
           ? 'EndInstrument'
           : `${topicAlias}.${toState ? getStateEnumId(toState) : transition.to}`;
       
-      const label = getTransitionLabel(transition, instrument, topicData.topic, toState);
-      if (label) {
-        lines.push(`    ${fromAlias} --> ${toAlias} : ${label}`);
+      if (transition.label) {
+        lines.push(`    ${fromAlias} --> ${toAlias} : ${transition.label}`);
       } else {
         lines.push(`    ${fromAlias} --> ${toAlias}`);
       }
@@ -358,25 +428,23 @@ export function generateAggregatePuml(project: DiagramProject): string | null {
   // Connect NewInstrument to first state of each root topic
   rootTopics.forEach((rootTopic) => {
     const rootId = `${instrument.type}.${rootTopic.topic.id}`;
-    // Find the first regular state that NewInstrument connects to
-    const startTransition = rootTopic.transitions.find(t => {
-      const fromState = rootTopic.states.find(s => s.id === t.from);
-      return fromState?.systemNodeType === 'NewInstrument';
-    });
-    
-    if (startTransition) {
-      const toState = rootTopic.states.find(s => s.id === startTransition.to);
-      let toAlias = toState?.systemNodeType === 'TopicEnd'
-        ? `${rootId}.End`
-        : `${rootId}.${toState ? getStateEnumId(toState) : startTransition.to}`;
-      
-      const label = getTransitionLabel(startTransition, instrument, rootTopic.topic, toState);
-      if (label) {
-        lines.push(`NewInstrument --> ${toAlias} : ${label}`);
-      } else {
-        lines.push(`NewInstrument --> ${toAlias}`);
-      }
-    }
+    getExpandedTransitions(rootTopic)
+      .filter((transition) => {
+        const fromState = rootTopic.states.find(s => s.id === transition.from);
+        return fromState?.systemNodeType === 'NewInstrument';
+      })
+      .forEach((transition) => {
+        const toState = rootTopic.states.find(s => s.id === transition.to);
+        let toAlias = toState?.systemNodeType === 'TopicEnd'
+          ? `${rootId}.End`
+          : `${rootId}.${toState ? getStateEnumId(toState) : transition.to}`;
+        
+        if (transition.label) {
+          lines.push(`NewInstrument --> ${toAlias} : ${transition.label}`);
+        } else {
+          lines.push(`NewInstrument --> ${toAlias}`);
+        }
+      });
   });
   lines.push('');
 
