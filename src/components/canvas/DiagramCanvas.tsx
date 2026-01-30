@@ -112,6 +112,7 @@ function DiagramCanvasInner() {
   const [isConnecting, setIsConnecting] = useState(false);
   const [newStateDialogOpen, setNewStateDialogOpen] = useState(false);
   const [newStatePosition, setNewStatePosition] = useState<XYPosition>({ x: 0, y: 0 });
+  const [teleportAnchors, setTeleportAnchors] = useState<Record<string, XYPosition>>({});
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const { getNodes, screenToFlowPosition } = useReactFlow();
 
@@ -172,6 +173,38 @@ function DiagramCanvasInner() {
     return computeEdgeIndices(selectedTopicData.transitions);
   }, [selectedTopicData]);
 
+  useEffect(() => {
+    if (!selectedTopicData) return;
+    setTeleportAnchors((prev) => {
+      const next = { ...prev };
+      const transitionIds = new Set(selectedTopicData.transitions.map((transition) => transition.id));
+
+      Object.keys(next).forEach((transitionId) => {
+        if (!transitionIds.has(transitionId)) {
+          delete next[transitionId];
+        }
+      });
+
+      if (Object.keys(next).length === 0) {
+        const candidate = selectedTopicData.transitions.find(
+          (transition) => transitionVisibility[transition.id] !== false
+        );
+        if (candidate) {
+          const sourceState = selectedTopicData.states.find((state) => state.id === candidate.from);
+          const targetState = selectedTopicData.states.find((state) => state.id === candidate.to);
+          if (sourceState && targetState) {
+            next[candidate.id] = {
+              x: (sourceState.position.x + targetState.position.x) / 2,
+              y: (sourceState.position.y + targetState.position.y) / 2,
+            };
+          }
+        }
+      }
+
+      return next;
+    });
+  }, [selectedTopicData, transitionVisibility]);
+
   const initialEdges: Edge[] = useMemo(() => {
     if (!selectedTopicData) return [];
     return selectedTopicData.transitions
@@ -202,10 +235,11 @@ function DiagramCanvasInner() {
           totalEdges: indexInfo.total,
           sourceHandleId: sourceHandle,
           targetHandleId: targetHandle,
+          teleportAnchor: teleportAnchors[transition.id],
         },
       };
     });
-  }, [selectedTopicData, selectedElementId, selectedElementType, handleEdgeSelect, edgeIndices, project?.selectedTopicId, transitionVisibility, updateTransitionRouting]);
+  }, [selectedTopicData, selectedElementId, selectedElementType, handleEdgeSelect, edgeIndices, project?.selectedTopicId, transitionVisibility, updateTransitionRouting, teleportAnchors]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);

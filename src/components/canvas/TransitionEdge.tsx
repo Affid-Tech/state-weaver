@@ -20,6 +20,7 @@ interface TransitionEdgeData {
   totalEdges?: number;
   sourceHandleId?: string;
   targetHandleId?: string;
+  teleportAnchor?: { x: number; y: number };
 }
 
 // Direction vectors for each handle position
@@ -314,6 +315,7 @@ export const TransitionEdge = memo(({
   const manualCurveOffset = transition?.curveOffset ?? 0;
   const sourceHandleId = edgeData?.sourceHandleId;
   const targetHandleId = edgeData?.targetHandleId;
+  const teleportAnchor = edgeData?.teleportAnchor;
   
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState(manualCurveOffset);
@@ -367,6 +369,28 @@ export const TransitionEdge = memo(({
     sourcePosition,
     reconnectAnchorRadius
   );
+  const labelAnchorX = teleportAnchor ? teleportAnchor.x : labelX;
+  const labelAnchorY = teleportAnchor ? teleportAnchor.y - 18 : labelY;
+  const edgeSegments = teleportAnchor
+    ? [
+        {
+          id: `${id}-segment-a`,
+          path: `M ${sourceX} ${sourceY} L ${teleportAnchor.x} ${teleportAnchor.y}`,
+          markerEnd: undefined,
+        },
+        {
+          id: `${id}-segment-b`,
+          path: `M ${teleportAnchor.x} ${teleportAnchor.y} L ${targetX} ${targetY}`,
+          markerEnd,
+        },
+      ]
+    : [
+        {
+          id,
+          path: edgePath,
+          markerEnd,
+        },
+      ];
   const targetHandlePosition = shiftHandlePosition(
     targetX,
     targetY,
@@ -420,21 +444,24 @@ export const TransitionEdge = memo(({
 
   return (
     <>
-      <BaseEdge
-        id={id}
-        path={edgePath}
-        style={{
-          stroke: isEdgeSelected
-            ? 'hsl(217, 91%, 50%)'
-            : isEndTrans
-              ? 'hsl(215, 16%, 60%)'
-              : flowColor ?? 'hsl(215, 16%, 47%)',
-          strokeWidth: isEdgeSelected ? 2.5 : 2,
-          strokeDasharray: isEndTrans ? '4 2' : undefined,
-        }}
-        markerEnd={markerEnd}
-        interactionWidth={interactionWidth ?? (isEdgeSelected ? 32 : 20)}
-      />
+      {edgeSegments.map((segment) => (
+        <BaseEdge
+          key={segment.id}
+          id={segment.id}
+          path={segment.path}
+          style={{
+            stroke: isEdgeSelected
+              ? 'hsl(217, 91%, 50%)'
+              : isEndTrans
+                ? 'hsl(215, 16%, 60%)'
+                : flowColor ?? 'hsl(215, 16%, 47%)',
+            strokeWidth: isEdgeSelected ? 2.5 : 2,
+            strokeDasharray: isEndTrans ? '4 2' : undefined,
+          }}
+          markerEnd={segment.markerEnd}
+          interactionWidth={interactionWidth ?? (isEdgeSelected ? 32 : 20)}
+        />
+      ))}
       {isEdgeSelected && (
         <>
           <circle
@@ -455,6 +482,24 @@ export const TransitionEdge = memo(({
           />
         </>
       )}
+      {teleportAnchor && (
+        <EdgeLabelRenderer>
+          <div
+            onClick={handleClick}
+            className={cn(
+              'absolute flex h-6 w-6 items-center justify-center rounded-full border text-[11px] font-semibold pointer-events-auto',
+              'bg-background text-primary shadow-sm',
+              isEdgeSelected && 'ring-2 ring-primary ring-offset-2'
+            )}
+            style={{
+              transform: `translate(-50%, -50%) translate(${teleportAnchor.x}px,${teleportAnchor.y}px)`,
+            }}
+            title="Teleport anchor"
+          >
+            ⟲
+          </div>
+        </EdgeLabelRenderer>
+      )}
       {label && (
         <EdgeLabelRenderer>
           <div
@@ -465,7 +510,7 @@ export const TransitionEdge = memo(({
               isEdgeSelected && 'ring-2 ring-primary ring-offset-1'
             )}
             style={{
-              transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
+              transform: `translate(-50%, -50%) translate(${labelAnchorX}px,${labelAnchorY}px)`,
             }}
           >
             {label}
@@ -473,7 +518,7 @@ export const TransitionEdge = memo(({
         </EdgeLabelRenderer>
       )}
       {/* Draggable control point - shown when selected */}
-      {isEdgeSelected && !isEndTrans && (
+      {isEdgeSelected && !isEndTrans && !teleportAnchor && (
         <EdgeLabelRenderer>
           <div
             onMouseDown={handleControlPointMouseDown}
