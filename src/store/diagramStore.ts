@@ -126,9 +126,14 @@ const createSystemNodes = (kind: TopicKind): StateNode[] => {
   ];
 };
 
-const LEGACY_END_NODE_IDS = new Set(['EndTopic', 'EndInstrument', 'EndInsturment']);
+const LEGACY_TOPIC_END_IDS = new Set(['EndTopic', 'TopicEnd']);
+const LEGACY_INSTRUMENT_END_IDS = new Set(['EndInstrument', 'EndInsturment', 'InstrumentEnd']);
+const LEGACY_END_NODE_IDS = new Set([...LEGACY_TOPIC_END_IDS, ...LEGACY_INSTRUMENT_END_IDS]);
 
 const isLegacyEndNode = (state: StateNode): boolean => {
+  if (state.systemNodeType === 'TopicEnd' || state.systemNodeType === 'InstrumentEnd') {
+    return true;
+  }
   if (LEGACY_END_NODE_IDS.has(state.id)) return true;
   if (LEGACY_END_NODE_IDS.has(state.label)) return true;
   if (state.stereotype && LEGACY_END_NODE_IDS.has(state.stereotype)) return true;
@@ -139,16 +144,30 @@ const normalizeTopicEndMarkers = (projects: DiagramProject[]): Set<string> => {
   const removedTransitionIds = new Set<string>();
   projects.forEach((project) => {
     project.topics.forEach((topicData) => {
-      const legacyEndStateIds = new Set(
-        topicData.states.filter(isLegacyEndNode).map((state) => state.id)
-      );
-      if (legacyEndStateIds.size > 0) {
+      const legacyEndStateKinds = new Map<string, TopicEndKind>();
+      topicData.states.forEach((state) => {
+        if (!isLegacyEndNode(state)) {
+          return;
+        }
+        if (
+          state.systemNodeType === 'InstrumentEnd'
+          || LEGACY_INSTRUMENT_END_IDS.has(state.id)
+          || LEGACY_INSTRUMENT_END_IDS.has(state.label)
+          || (state.stereotype && LEGACY_INSTRUMENT_END_IDS.has(state.stereotype))
+        ) {
+          legacyEndStateKinds.set(state.id, 'negative');
+          return;
+        }
+        legacyEndStateKinds.set(state.id, 'positive');
+      });
+      if (legacyEndStateKinds.size > 0) {
         const transitionsToRemove = new Set<string>();
         topicData.transitions.forEach((transition) => {
-          if (legacyEndStateIds.has(transition.to)) {
+          const legacyEndKind = legacyEndStateKinds.get(transition.to);
+          if (legacyEndKind) {
             const fromState = topicData.states.find((state) => state.id === transition.from);
             if (fromState && fromState.topicEndKind == null) {
-              fromState.topicEndKind = 'positive';
+              fromState.topicEndKind = legacyEndKind;
             }
             transitionsToRemove.add(transition.id);
             removedTransitionIds.add(transition.id);
@@ -160,7 +179,7 @@ const normalizeTopicEndMarkers = (projects: DiagramProject[]): Set<string> => {
           );
         }
         topicData.states = topicData.states.filter(
-          (state) => !legacyEndStateIds.has(state.id)
+          (state) => !legacyEndStateKinds.has(state.id)
         );
       }
       topicData.states.forEach((state) => {
@@ -180,6 +199,31 @@ const normalizeTopicEndMarkers = (projects: DiagramProject[]): Set<string> => {
           transition.endTopicKind = 'positive';
         }
       });
+      const statesById = new Map(topicData.states.map((state) => [state.id, state]));
+      if (topicData.transitions.some((transition) => transition.kind === 'endTopic')) {
+        const transitionsToRemove = new Set<string>();
+        topicData.transitions.forEach((transition) => {
+          if (transition.kind !== 'endTopic') return;
+          const toState = statesById.get(transition.to);
+          if (!toState) {
+            transitionsToRemove.add(transition.id);
+            removedTransitionIds.add(transition.id);
+            return;
+          }
+          if (toState.systemNodeType !== 'TopicEnd') {
+            const fromState = statesById.get(transition.from);
+            transition.kind = deriveTransitionKind(fromState, toState);
+            if (transition.kind !== 'endTopic') {
+              transition.endTopicKind = undefined;
+            }
+          }
+        });
+        if (transitionsToRemove.size > 0) {
+          topicData.transitions = topicData.transitions.filter(
+            (transition) => !transitionsToRemove.has(transition.id)
+          );
+        }
+      }
     });
   });
   return removedTransitionIds;
