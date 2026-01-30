@@ -259,7 +259,7 @@ function validateTopic(topicData: TopicData, instrumentType: string, fieldConfig
         issues.push({
           id: uuidv4(),
           level: 'warning',
-          message: `Fork "${forkState.label}" has no incoming transitions`,
+          message: `Fork "${forkState.label}" has no incoming transitions (no effective expansion)`,
           topicId: topic.id,
           elementId: forkState.id,
           elementType: 'state',
@@ -270,7 +270,7 @@ function validateTopic(topicData: TopicData, instrumentType: string, fieldConfig
         issues.push({
           id: uuidv4(),
           level: 'warning',
-          message: `Fork "${forkState.label}" has no outgoing transitions`,
+          message: `Fork "${forkState.label}" has no outgoing transitions (no effective expansion)`,
           topicId: topic.id,
           elementId: forkState.id,
           elementType: 'state',

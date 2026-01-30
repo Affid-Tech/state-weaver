@@ -212,9 +212,14 @@ export function PreviewPanel() {
             style={{ width: codeWidth }}
           >
             <ScrollArea className="h-full">
-              <pre className="p-4 text-xs font-mono text-muted-foreground whitespace-pre-wrap">
-                {pumlText || 'No PlantUML generated'}
-              </pre>
+              <div className="p-4 space-y-2">
+                <p className="text-xs text-muted-foreground">
+                  Forks are visual-only routing aids and do not appear in the PlantUML output.
+                </p>
+                <pre className="text-xs font-mono text-muted-foreground whitespace-pre-wrap">
+                  {pumlText || 'No PlantUML generated'}
+                </pre>
+              </div>
             </ScrollArea>
           </div>
         </div>

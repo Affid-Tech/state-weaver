@@ -180,6 +180,9 @@ export default function Gallery() {
                             </Button>
                         </div>
                     </div>
+                    <p className="text-xs text-muted-foreground mb-3">
+                        JSON export/import persists forks as system nodes with <span className="font-mono">systemNodeType: 'Fork'</span>.
+                    </p>
                     <GalleryFilters
                         search={search}
                         onSearchChange={setSearch}
