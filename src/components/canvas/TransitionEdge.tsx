@@ -545,9 +545,10 @@ export const TransitionEdge = memo(({
             style={{
               transform: `translate(-50%, -50%) translate(${teleportAnchorOut.x}px,${teleportAnchorOut.y}px)`,
             }}
+            aria-label="Teleport anchor (out)"
             title="Teleport anchor (out)"
           >
-            ⟲
+            OUT
           </div>
         </EdgeLabelRenderer>
       )}
@@ -565,9 +566,10 @@ export const TransitionEdge = memo(({
             style={{
               transform: `translate(-50%, -50%) translate(${teleportAnchorIn.x}px,${teleportAnchorIn.y}px)`,
             }}
+            aria-label="Teleport anchor (in)"
             title="Teleport anchor (in)"
           >
-            ⟲
+            IN
           </div>
         </EdgeLabelRenderer>
       )}
