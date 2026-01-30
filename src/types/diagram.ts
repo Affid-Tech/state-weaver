@@ -59,6 +59,7 @@ export interface StateNode {
   position: Position;
   isSystemNode: boolean;
   systemNodeType?: SystemNodeType;
+  isTopicEnd?: boolean;
 }
 
 export interface Transition {
@@ -124,7 +125,7 @@ export function deriveTransitionKind(
   }
   
   // Ending at TopicEnd
-  if (toState.systemNodeType === 'TopicEnd') {
+  if (toState.systemNodeType === 'TopicEnd' || toState.isTopicEnd) {
     return 'endTopic';
   }
   

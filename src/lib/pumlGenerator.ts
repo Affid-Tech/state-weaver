@@ -38,6 +38,12 @@ function escapeLabel(label: string): string {
   return label.replace(/"/g, '\\"');
 }
 
+const isTopicEndSystemNode = (state: StateNode | undefined): boolean =>
+  state?.systemNodeType === 'TopicEnd';
+
+const isTopicEndState = (state: StateNode | undefined): boolean =>
+  isTopicEndSystemNode(state) || state?.isTopicEnd === true;
+
 // Get PUML-safe state ID from a StateNode
 function getStateEnumId(state: StateNode): string {
   if (state.isSystemNode) {
@@ -201,6 +207,8 @@ export function generateTopicPuml(project: DiagramProject, topicId: string): str
       lines.push(`state ${instrument.type}.${topic.id}.End as "Topic End" <<exitPoint>>`);
     } else if (state.systemNodeType === 'InstrumentEnd') {
       // Already declared at top level
+    } else if (state.isTopicEnd) {
+      lines.push(`state "${escapeLabel(state.label)}" as ${qualifiedId} <<exitPoint>>`);
     } else {
       const label = state.label;
       const stereotype = state.stereotype || stateEnumId;
@@ -312,6 +320,9 @@ export function generateAggregatePuml(project: DiagramProject): string | null {
         lines.push(`    state ${rootId}.End as "Topic End" <<exitPoint>>`);
       } else if (state.systemNodeType === 'InstrumentEnd') {
         // Skip, declared at top level
+      } else if (state.isTopicEnd) {
+        const stateEnumId = getStateEnumId(state);
+        lines.push(`    state "${escapeLabel(state.label)}" as ${rootId}.${stateEnumId} <<exitPoint>>`);
       } else {
         const stateEnumId = getStateEnumId(state);
         const label = state.label;
@@ -368,6 +379,9 @@ export function generateAggregatePuml(project: DiagramProject): string | null {
         lines.push(`    state ${topicAlias}.End as "Topic End" <<exitPoint>>`);
       } else if (state.systemNodeType === 'InstrumentEnd') {
         // Skip, declared at top level
+      } else if (state.isTopicEnd) {
+        const stateEnumId = getStateEnumId(state);
+        lines.push(`    state "${escapeLabel(state.label)}" as ${topicAlias}.${stateEnumId} <<exitPoint>>`);
       } else {
         const stateEnumId = getStateEnumId(state);
         const label = state.label;
@@ -411,7 +425,14 @@ export function generateAggregatePuml(project: DiagramProject): string | null {
     // Normal topic ends flow into NewTopic_In (sink - no outgoing)
     normalTopics.forEach((topicData) => {
       const topicAlias = `${instrument.type}.${topicData.topic.id}`;
-      lines.push(`  ${topicAlias}.End --> ${instrument.type}_NewTopic_In`);
+      topicData.states
+        .filter((state) => isTopicEndState(state))
+        .forEach((state) => {
+          const endAlias = isTopicEndSystemNode(state)
+            ? `${topicAlias}.End`
+            : `${topicAlias}.${getStateEnumId(state)}`;
+          lines.push(`  ${endAlias} --> ${instrument.type}_NewTopic_In`);
+        });
     });
     lines.push('');
   }
@@ -452,7 +473,14 @@ export function generateAggregatePuml(project: DiagramProject): string | null {
   if (hasNormalTopics) {
     rootTopics.forEach((rootTopic) => {
       const rootId = `${instrument.type}.${rootTopic.topic.id}`;
-      lines.push(`${rootId}.End --> ${instrument.type}_NewTopic_Out`);
+      rootTopic.states
+        .filter((state) => isTopicEndState(state))
+        .forEach((state) => {
+          const endAlias = isTopicEndSystemNode(state)
+            ? `${rootId}.End`
+            : `${rootId}.${getStateEnumId(state)}`;
+          lines.push(`${endAlias} --> ${instrument.type}_NewTopic_Out`);
+        });
     });
     lines.push('');
   }
