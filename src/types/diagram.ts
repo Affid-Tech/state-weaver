@@ -71,6 +71,7 @@ export interface Transition {
   kind: TransitionKind;
   isRoutingOnly?: boolean;
   endTopicKind?: TopicEndKind;
+  teleportEnabled?: boolean;
   // Message properties
   revision?: string; // R1, R2, R3 - optional
   instrument?: string; // optional
