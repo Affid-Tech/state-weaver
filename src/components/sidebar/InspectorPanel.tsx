@@ -412,6 +412,9 @@ export function InspectorPanel() {
                   {/* Edge Routing Controls - available for all transitions */}
                   <div className="border-t pt-4 mt-4 space-y-4">
                     <h4 className="text-sm font-medium text-muted-foreground">Edge Routing</h4>
+                    <p className="text-xs text-muted-foreground">
+                      Tip: Click an edge to reveal its endpoints—drag the highlighted handles to reconnect. Alt+click cycles through overlapping edges that share the same handles.
+                    </p>
                     
                     <div className="space-y-2">
                       <Label>Source Side</Label>

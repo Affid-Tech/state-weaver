@@ -2,6 +2,7 @@ import { memo, useState, useCallback, useEffect } from 'react';
 import {
   BaseEdge,
   EdgeLabelRenderer,
+  Position,
   type EdgeProps,
   useReactFlow,
 } from '@xyflow/react';
@@ -267,6 +268,30 @@ function calculateOffsetFromPosition(
   return toMouseX * perpX + toMouseY * perpY;
 }
 
+function shiftHandlePosition(
+  x: number,
+  y: number,
+  position: Position | null | undefined,
+  radius: number
+) {
+  if (!position) {
+    return { x, y };
+  }
+
+  switch (position) {
+    case Position.Left:
+      return { x: x - radius, y };
+    case Position.Right:
+      return { x: x + radius, y };
+    case Position.Top:
+      return { x, y: y - radius };
+    case Position.Bottom:
+      return { x, y: y + radius };
+    default:
+      return { x, y };
+  }
+}
+
 export const TransitionEdge = memo(({
   id,
   sourceX,
@@ -277,6 +302,9 @@ export const TransitionEdge = memo(({
   target,
   data,
   selected,
+  sourcePosition,
+  targetPosition,
+  interactionWidth,
 }: EdgeProps) => {
   const edgeData = data as unknown as TransitionEdgeData | undefined;
   const transition = edgeData?.transition;
@@ -327,6 +355,20 @@ export const TransitionEdge = memo(({
   };
 
   const isEdgeSelected = selected || edgeData?.isSelected;
+  const reconnectAnchorRadius = 10;
+  const visualHandleRadius = 6;
+  const sourceHandlePosition = shiftHandlePosition(
+    sourceX,
+    sourceY,
+    sourcePosition,
+    reconnectAnchorRadius
+  );
+  const targetHandlePosition = shiftHandlePosition(
+    targetX,
+    targetY,
+    targetPosition,
+    reconnectAnchorRadius
+  );
 
   // Drag handlers for control point
   const handleControlPointMouseDown = useCallback((e: React.MouseEvent) => {
@@ -383,8 +425,28 @@ export const TransitionEdge = memo(({
           strokeDasharray: isEndTrans ? '4 2' : undefined,
         }}
         markerEnd="url(#arrow)"
-        interactionWidth={20}
+        interactionWidth={interactionWidth ?? (isEdgeSelected ? 32 : 20)}
       />
+      {isEdgeSelected && (
+        <>
+          <circle
+            cx={sourceHandlePosition.x}
+            cy={sourceHandlePosition.y}
+            r={visualHandleRadius}
+            className="fill-background stroke-primary"
+            strokeWidth={2}
+            pointerEvents="none"
+          />
+          <circle
+            cx={targetHandlePosition.x}
+            cy={targetHandlePosition.y}
+            r={visualHandleRadius}
+            className="fill-background stroke-primary"
+            strokeWidth={2}
+            pointerEvents="none"
+          />
+        </>
+      )}
       {label && (
         <EdgeLabelRenderer>
           <div
