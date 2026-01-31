@@ -37,7 +37,12 @@ export function GalleryFilters({
       </div>
 
       <Select value={revisionFilter} onValueChange={onRevisionFilterChange}>
-        <SelectTrigger className="w-[140px]" data-tour="gallery-revision-filter">
+        <SelectTrigger
+          className="w-[140px]"
+          data-tour="gallery-revision-filter"
+          aria-label="All Revisions"
+          role="button"
+        >
           <SelectValue placeholder="All Revisions" />
         </SelectTrigger>
         <SelectContent>
