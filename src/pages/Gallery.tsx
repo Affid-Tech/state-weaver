@@ -1,4 +1,4 @@
-import {useEffect, useMemo, useRef, useState} from 'react';
+import {useMemo, useRef, useState} from 'react';
 import {useNavigate} from 'react-router-dom';
 import {Archive, PlusCircle, Settings, Upload} from 'lucide-react';
 import {Button} from '@/components/ui/button';
@@ -13,7 +13,6 @@ import {exportProjectAsZip} from '@/lib/exportUtils';
 import {toast} from 'sonner';
 import type {DiagramProject} from '@/types/diagram';
 import {useTourStore} from '@/store/tourStore';
-import {galleryTourSteps} from '@/lib/tourConfig';
 
 export default function Gallery() {
     const navigate = useNavigate();
@@ -27,10 +26,6 @@ export default function Gallery() {
     const [isNewDialogOpen, setIsNewDialogOpen] = useState(false);
     const [editingProject, setEditingProject] = useState<DiagramProject | null>(null);
     const startTour = useTourStore(s => s.startTour);
-    const {activeTour, stepIndex} = useTourStore(s => ({
-        activeTour: s.activeTour,
-        stepIndex: s.stepIndex,
-    }));
 
     // Export mode state
     const importProject = useDiagramStore(s => s.importProject);
@@ -149,24 +144,6 @@ export default function Gallery() {
 
     const totalProjects = groupedProjects.reduce((sum, g) => sum + g.projects.length, 0);
 
-    useEffect(() => {
-        if (activeTour !== 'gallery') {
-            if (isSettingsOpen) setIsSettingsOpen(false);
-            if (isNewDialogOpen) setIsNewDialogOpen(false);
-            return;
-        }
-
-        const stepTarget = galleryTourSteps[stepIndex]?.target;
-        const targetValue = typeof stepTarget === 'string' ? stepTarget : '';
-        const dataTourMatch = targetValue.match(/data-tour="([^"]+)"/);
-        const targetName = dataTourMatch?.[1] ?? targetValue;
-        const shouldOpenSettings = targetName.startsWith('field-config-');
-        const shouldOpenNew = targetName.startsWith('new-instrument-');
-
-        if (shouldOpenSettings !== isSettingsOpen) setIsSettingsOpen(shouldOpenSettings);
-        if (shouldOpenNew !== isNewDialogOpen) setIsNewDialogOpen(shouldOpenNew);
-    }, [activeTour, isNewDialogOpen, isSettingsOpen, stepIndex]);
-
     return (
         <div className="min-h-screen bg-background">
             {/* Header */}
@@ -205,7 +182,6 @@ export default function Gallery() {
                                 variant="outline"
                                 size="sm"
                                 onClick={() => setIsSettingsOpen(true)}
-                                data-tour="gallery-field-config"
                             >
                                 <Settings className="h-4 w-4 mr-2"/>
                                 Field Config

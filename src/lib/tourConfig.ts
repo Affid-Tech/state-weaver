@@ -1,9 +1,7 @@
 import type { Step } from 'react-joyride';
 
 export type TourStep = Step & {
-  advanceOnSelect?: boolean;
   autoAdvanceMs?: number;
-  hideFooter?: boolean;
 };
 
 export const galleryTourSteps: TourStep[] = [

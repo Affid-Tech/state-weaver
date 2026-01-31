@@ -7,7 +7,6 @@ import {ScrollArea} from '@/components/ui/scroll-area';
 import {Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,} from '@/components/ui/dialog';
 import {Popover, PopoverContent, PopoverTrigger} from '@/components/ui/popover';
 import {useDiagramStore} from '@/store/diagramStore';
-import {useTourStore} from '@/store/tourStore';
 import {toast} from 'sonner';
 import {isValidEnumName} from '@/lib/validation';
 import {FieldConfig} from '@/types/fieldConfig';
@@ -41,7 +40,6 @@ const FLOW_TYPE_COLOR_PRESETS = [
 
 export function FieldConfigDialog({ open, onOpenChange }: FieldConfigDialogProps) {
   const { fieldConfig, updateFieldConfig } = useDiagramStore();
-  const { run: isTourRunning, activeTour, stepIndex, setStepIndex } = useTourStore();
   const [newValues, setNewValues] = useState<Record<EditableFieldKey, string>>({
     revisions: '',
     instrumentTypes: '',
@@ -60,19 +58,6 @@ export function FieldConfigDialog({ open, onOpenChange }: FieldConfigDialogProps
   const handleTabChange = (value: string) => {
     const tab = value as EditableFieldKey;
     setActiveTab(tab);
-    if (isTourRunning && activeTour === 'gallery') {
-      const tabStepIndexMap: Record<EditableFieldKey, number> = {
-        revisions: 4,
-        instrumentTypes: 5,
-        topicTypes: 6,
-        messageTypes: 7,
-        flowTypes: 8,
-      };
-      const nextIndex = tabStepIndexMap[tab];
-      if (nextIndex !== undefined && stepIndex >= 4 && stepIndex <= 8) {
-        setStepIndex(nextIndex);
-      }
-    }
   };
 
   const handleAddValue = (field: EditableFieldKey) => {
@@ -193,7 +178,6 @@ export function FieldConfigDialog({ open, onOpenChange }: FieldConfigDialogProps
           placeholder={`Add new value (e.g., MY_VALUE)...`}
           onKeyDown={(e) => e.key === 'Enter' && handleAddValue(field)}
           className="font-mono"
-          data-tour={`field-config-input-${field}`}
         />
         <Button onClick={() => handleAddValue(field)} disabled={!newValues[field].trim()}>
           <Plus className="h-4 w-4" />
@@ -225,7 +209,6 @@ export function FieldConfigDialog({ open, onOpenChange }: FieldConfigDialogProps
                       key={tab}
                       value={tab.toString()}
                       className="text-xs px-2"
-                      data-tour={`field-config-tab-${tab}`}
                     >
                       {FIELD_LABELS[tab]}
                     </TabsTrigger>
@@ -242,7 +225,7 @@ export function FieldConfigDialog({ open, onOpenChange }: FieldConfigDialogProps
         </Tabs>
 
         <div className="flex justify-end pt-4 border-t mt-4">
-          <Button onClick={() => onOpenChange(false)} data-tour="field-config-done">
+          <Button onClick={() => onOpenChange(false)}>
             Done
           </Button>
         </div>

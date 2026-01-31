@@ -13,7 +13,6 @@ import {
 } from '@/components/ui/dialog';
 import { useDiagramStore } from '@/store/diagramStore';
 import { toast } from 'sonner';
-import { dispatchTourSelect } from '@/lib/tourEvents';
 
 interface NewInstrumentDialogProps {
   open: boolean;
@@ -84,14 +83,10 @@ export function NewInstrumentDialog({ open, onOpenChange, onCreated }: NewInstru
               value={instrumentType}
               onChange={(value) => {
                 setInstrumentType(value);
-                if (value) {
-                  dispatchTourSelect('new-instrument-type');
-                }
               }}
               options={instrumentTypeOptions}
               placeholder="Select or enter type..."
               allowClear={false}
-              triggerProps={{ 'data-tour': 'new-instrument-type' }}
             />
           </div>
           <div className="space-y-2">
@@ -100,17 +95,13 @@ export function NewInstrumentDialog({ open, onOpenChange, onCreated }: NewInstru
               value={revision}
               onChange={(value) => {
                 setRevision(value);
-                if (value) {
-                  dispatchTourSelect('new-instrument-revision');
-                }
               }}
               options={revisionOptions}
               placeholder="Select or enter revision..."
               allowClear={false}
-              triggerProps={{ 'data-tour': 'new-instrument-revision' }}
             />
           </div>
-          <div className="space-y-2" data-tour="new-instrument-description">
+          <div className="space-y-2">
             <Label>Description (optional)</Label>
             <Textarea
               value={description}
@@ -124,7 +115,7 @@ export function NewInstrumentDialog({ open, onOpenChange, onCreated }: NewInstru
           <Button variant="outline" onClick={handleCancel}>
             Cancel
           </Button>
-          <Button onClick={handleCreate} disabled={!isValid} data-tour="new-instrument-create">
+          <Button onClick={handleCreate} disabled={!isValid}>
             Create
           </Button>
         </DialogFooter>

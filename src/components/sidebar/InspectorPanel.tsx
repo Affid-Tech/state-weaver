@@ -180,7 +180,7 @@ export function InspectorPanel() {
           <div className="p-4 border-b border-border space-y-2">
             <Dialog open={isAddStateOpen} onOpenChange={setIsAddStateOpen}>
               <DialogTrigger asChild>
-                <Button className="w-full" disabled={!project.selectedTopicId} data-tour="editor-inspector-add-state">
+                <Button className="w-full" disabled={!project.selectedTopicId}>
                   <Plus className="h-4 w-4 mr-2" />
                   Add State
                 </Button>
@@ -199,7 +199,6 @@ export function InspectorPanel() {
                       value={newStateLabel}
                       onChange={(e) => setNewStateLabel(e.target.value)}
                       placeholder="e.g., Payment Submitted"
-                      data-tour="editor-add-state-label"
                     />
                   </div>
                 </div>
@@ -207,7 +206,7 @@ export function InspectorPanel() {
                   <Button variant="outline" onClick={() => setIsAddStateOpen(false)}>
                     Cancel
                   </Button>
-                  <Button onClick={handleAddState} disabled={!newStateLabel.trim()} data-tour="editor-add-state-confirm">
+                  <Button onClick={handleAddState} disabled={!newStateLabel.trim()}>
                     Add State
                   </Button>
                 </DialogFooter>
