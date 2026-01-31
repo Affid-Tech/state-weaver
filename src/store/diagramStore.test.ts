@@ -184,6 +184,32 @@ describe("diagramStore", () => {
     );
   });
 
+  it("rehydrates transition visibility from storage", async () => {
+    const persistedState = {
+      projects: [],
+      activeProjectId: null,
+      selectedElementId: null,
+      selectedElementType: null,
+      viewMode: "topic",
+      transitionVisibility: {
+        "transition-123": false,
+      },
+      hiddenSelfLoopTransitionIds: {},
+      fieldConfig: JSON.parse(JSON.stringify(DEFAULT_FIELD_CONFIG)),
+    };
+
+    localStorage.setItem(
+      "diagram-workspace",
+      JSON.stringify({ state: persistedState, version: 0 }),
+    );
+
+    await useDiagramStore.persist.rehydrate();
+
+    expect(
+      useDiagramStore.getState().transitionVisibility["transition-123"],
+    ).toBe(false);
+  });
+
   it("normalizes legacy end markers on import", () => {
     const stateFixture: DiagramState = {
       projects: [

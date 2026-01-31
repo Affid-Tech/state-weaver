@@ -792,12 +792,15 @@ export const useDiagramStore = create<DiagramState>()(
         selectedElementId: state.selectedElementId,
         selectedElementType: state.selectedElementType,
         viewMode: state.viewMode,
+        transitionVisibility: state.transitionVisibility,
         hiddenSelfLoopTransitionIds: state.hiddenSelfLoopTransitionIds,
         fieldConfig: state.fieldConfig,
       }),
       onRehydrateStorage: () => (state) => {
         // Fix up any inconsistent state after rehydration
         if (state) {
+          state.transitionVisibility ??= {};
+          state.hiddenSelfLoopTransitionIds ??= {};
           const removedTransitionIds = normalizeTopicEndMarkers(state.projects);
           removedTransitionIds.forEach((transitionId) => {
             delete state.transitionVisibility[transitionId];
