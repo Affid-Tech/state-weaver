@@ -1,4 +1,5 @@
 import Joyride, { CallBackProps, STATUS } from 'react-joyride';
+import { toast } from 'sonner';
 import { tourSteps } from '@/lib/tourConfig';
 import { useTourStore } from '@/store/tourStore';
 
@@ -11,6 +12,18 @@ export function TourLauncher() {
     if (status === STATUS.FINISHED || status === STATUS.SKIPPED) {
       stopTour();
       return;
+    }
+
+    if (type === 'target:notFound') {
+      const step = tourSteps[index];
+      const target = typeof step?.target === 'string' ? step.target : '';
+      const isEditorStep = target.includes('editor-');
+
+      if (isEditorStep) {
+        toast('Open an instrument to continue the tour, then restart it from the gallery.');
+        stopTour();
+        return;
+      }
     }
 
     if (type === 'step:after' || type === 'target:notFound') {
