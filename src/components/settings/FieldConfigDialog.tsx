@@ -162,6 +162,7 @@ export function FieldConfigDialog({ open, onOpenChange }: FieldConfigDialogProps
                   variant="ghost"
                   className="h-6 w-6 text-destructive hover:text-destructive"
                   onClick={() => handleRemoveValue(field, value)}
+                  aria-label={`Remove ${value}`}
                 >
                   <Trash2 className="h-3 w-3" />
                 </Button>
@@ -179,7 +180,11 @@ export function FieldConfigDialog({ open, onOpenChange }: FieldConfigDialogProps
           onKeyDown={(e) => e.key === 'Enter' && handleAddValue(field)}
           className="font-mono"
         />
-        <Button onClick={() => handleAddValue(field)} disabled={!newValues[field].trim()}>
+        <Button
+          onClick={() => handleAddValue(field)}
+          disabled={!newValues[field].trim()}
+          aria-label={`Add ${FIELD_LABELS[field]} value`}
+        >
           <Plus className="h-4 w-4" />
         </Button>
       </div>
