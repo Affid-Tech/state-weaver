@@ -30,7 +30,6 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Combobox } from '@/components/ui/combobox';
 import { useDiagramStore } from '@/store/diagramStore';
 import { cn } from '@/lib/utils';
-import { dispatchTourSelect } from '@/lib/tourEvents';
 import { toast } from 'sonner';
 import type { TopicKind, TopicData } from '@/types/diagram';
 
@@ -145,7 +144,6 @@ export function StructureSidebar() {
                 size="icon"
                 variant="ghost"
                 className="h-6 w-6 text-sidebar-foreground hover:bg-sidebar-accent"
-                data-tour="editor-topic-create"
               >
                 <Plus className="h-4 w-4" />
               </Button>
@@ -164,13 +162,9 @@ export function StructureSidebar() {
                     value={newTopicId}
                     onChange={(value) => {
                       setNewTopicId(value);
-                      if (value) {
-                        dispatchTourSelect('editor-topic-type');
-                      }
                     }}
                     options={availableTopicTypesForCreate}
                     placeholder="e.g., Release"
-                    triggerProps={{ 'data-tour': 'editor-topic-type' }}
                   />
                 </div>
                 <div className="space-y-2">
@@ -187,10 +181,9 @@ export function StructureSidebar() {
                     value={newTopicKind}
                     onValueChange={(value) => {
                       setNewTopicKind(value as TopicKind);
-                      dispatchTourSelect('editor-topic-kind');
                     }}
                   >
-                    <SelectTrigger data-tour="editor-topic-kind">
+                    <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -204,7 +197,7 @@ export function StructureSidebar() {
                 <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
                   Cancel
                 </Button>
-                <Button onClick={handleCreateTopic} disabled={!newTopicId.trim()} data-tour="editor-topic-create-confirm">
+                <Button onClick={handleCreateTopic} disabled={!newTopicId.trim()}>
                   Create Topic
                 </Button>
               </DialogFooter>

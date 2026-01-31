@@ -54,7 +54,6 @@ export function InstrumentCard({
         !isExportMode && "hover:shadow-lg hover:border-primary/50"
       )}
       onClick={handleCardClick}
-      data-tour={!isExportMode ? "gallery-project-card" : undefined}
     >
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
