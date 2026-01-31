@@ -159,7 +159,12 @@ export default function Gallery() {
                                 onChange={handleImportProjectJson}
                                 className="hidden"
                             />
-                            <Button variant="ghost" size="sm" onClick={() => projectImportFileInputRef.current?.click()}>
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => projectImportFileInputRef.current?.click()}
+                                data-tour="gallery-reload"
+                            >
                                 <Upload className="h-4 w-4 mr-2"/>
                                 Reload Project
                             </Button>
@@ -191,8 +196,8 @@ export default function Gallery() {
                             </Button>
                             <Button
                                 variant="secondary"
-                                onClick={startTour}
-                                data-tour="nav-start-tour"
+                                onClick={() => startTour('gallery')}
+                                data-tour="gallery-start-tour"
                             >
                                 Start Tour
                             </Button>

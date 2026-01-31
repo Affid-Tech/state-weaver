@@ -166,6 +166,7 @@ export function FieldConfigDialog({ open, onOpenChange }: FieldConfigDialogProps
           placeholder={`Add new value (e.g., MY_VALUE)...`}
           onKeyDown={(e) => e.key === 'Enter' && handleAddValue(field)}
           className="font-mono"
+          data-tour={`field-config-input-${field}`}
         />
         <Button onClick={() => handleAddValue(field)} disabled={!newValues[field].trim()}>
           <Plus className="h-4 w-4" />
@@ -193,7 +194,14 @@ export function FieldConfigDialog({ open, onOpenChange }: FieldConfigDialogProps
             <>
               {(Object.keys(FIELD_LABELS) as FieldKey[]).map((tab) => {
                 return (
-                    <TabsTrigger key={tab} value={tab.toString()} className="text-xs px-2">{FIELD_LABELS[tab]}</TabsTrigger>
+                    <TabsTrigger
+                      key={tab}
+                      value={tab.toString()}
+                      className="text-xs px-2"
+                      data-tour={`field-config-tab-${tab}`}
+                    >
+                      {FIELD_LABELS[tab]}
+                    </TabsTrigger>
                 );
               })}
             </>
@@ -207,7 +215,9 @@ export function FieldConfigDialog({ open, onOpenChange }: FieldConfigDialogProps
         </Tabs>
 
         <div className="flex justify-end pt-4 border-t mt-4">
-          <Button onClick={() => onOpenChange(false)}>Done</Button>
+          <Button onClick={() => onOpenChange(false)} data-tour="field-config-done">
+            Done
+          </Button>
         </div>
       </DialogContent>
     </Dialog>

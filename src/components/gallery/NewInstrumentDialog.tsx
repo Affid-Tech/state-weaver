@@ -77,7 +77,7 @@ export function NewInstrumentDialog({ open, onOpenChange, onCreated }: NewInstru
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">
-          <div className="space-y-2">
+          <div className="space-y-2" data-tour="new-instrument-type">
             <Label>Instrument Type *</Label>
             <Combobox
               value={instrumentType}
@@ -87,7 +87,7 @@ export function NewInstrumentDialog({ open, onOpenChange, onCreated }: NewInstru
               allowClear={false}
             />
           </div>
-          <div className="space-y-2">
+          <div className="space-y-2" data-tour="new-instrument-revision">
             <Label>Revision *</Label>
             <Combobox
               value={revision}
@@ -97,7 +97,7 @@ export function NewInstrumentDialog({ open, onOpenChange, onCreated }: NewInstru
               allowClear={false}
             />
           </div>
-          <div className="space-y-2">
+          <div className="space-y-2" data-tour="new-instrument-description">
             <Label>Description (optional)</Label>
             <Textarea
               value={description}
@@ -111,7 +111,7 @@ export function NewInstrumentDialog({ open, onOpenChange, onCreated }: NewInstru
           <Button variant="outline" onClick={handleCancel}>
             Cancel
           </Button>
-          <Button onClick={handleCreate} disabled={!isValid}>
+          <Button onClick={handleCreate} disabled={!isValid} data-tour="new-instrument-create">
             Create
           </Button>
         </DialogFooter>

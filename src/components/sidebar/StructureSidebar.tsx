@@ -140,7 +140,12 @@ export function StructureSidebar() {
           </Label>
           <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
             <DialogTrigger asChild>
-              <Button size="icon" variant="ghost" className="h-6 w-6 text-sidebar-foreground hover:bg-sidebar-accent">
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-6 w-6 text-sidebar-foreground hover:bg-sidebar-accent"
+                data-tour="editor-topic-create"
+              >
                 <Plus className="h-4 w-4" />
               </Button>
             </DialogTrigger>
@@ -152,7 +157,7 @@ export function StructureSidebar() {
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4 py-4">
-                <div className="space-y-2">
+                <div className="space-y-2" data-tour="editor-topic-type">
                   <Label>Topic Type *</Label>
                   <Combobox
                     value={newTopicId}
@@ -172,7 +177,7 @@ export function StructureSidebar() {
                 <div className="space-y-2">
                   <Label>Kind</Label>
                   <Select value={newTopicKind} onValueChange={(v) => setNewTopicKind(v as TopicKind)}>
-                    <SelectTrigger>
+                    <SelectTrigger data-tour="editor-topic-kind">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -186,7 +191,7 @@ export function StructureSidebar() {
                 <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
                   Cancel
                 </Button>
-                <Button onClick={handleCreateTopic} disabled={!newTopicId.trim()}>
+                <Button onClick={handleCreateTopic} disabled={!newTopicId.trim()} data-tour="editor-topic-create-confirm">
                   Create Topic
                 </Button>
               </DialogFooter>
