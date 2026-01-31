@@ -32,11 +32,12 @@ export function GalleryFilters({
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
           className="pl-9"
+          data-tour="gallery-search"
         />
       </div>
 
       <Select value={revisionFilter} onValueChange={onRevisionFilterChange}>
-        <SelectTrigger className="w-[140px]">
+        <SelectTrigger className="w-[140px]" data-tour="gallery-revision-filter">
           <SelectValue placeholder="All Revisions" />
         </SelectTrigger>
         <SelectContent>

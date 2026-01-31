@@ -100,7 +100,7 @@ export function PreviewPanel() {
   // If no project, show placeholder
   if (!project) {
     return (
-      <div className="border-t border-border bg-card flex flex-col h-full overflow-hidden">
+      <div className="border-t border-border bg-card flex flex-col h-full overflow-hidden" data-tour="editor-preview">
         <div className="flex items-center justify-center h-full text-muted-foreground">
           <p className="text-sm">No project selected</p>
         </div>
@@ -109,7 +109,7 @@ export function PreviewPanel() {
   }
 
   return (
-    <div className="border-t border-border bg-card flex flex-col h-full overflow-hidden">
+    <div className="border-t border-border bg-card flex flex-col h-full overflow-hidden" data-tour="editor-preview">
       <div className="flex items-center justify-between px-4 py-2 border-b border-border flex-shrink-0">
         <button
           onClick={() => setIsExpanded(!isExpanded)}

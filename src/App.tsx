@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Gallery from "./pages/Gallery";
 import Editor from "./pages/Editor";
 import NotFound from "./pages/NotFound";
+import { TourLauncher } from "@/components/tour/TourLauncher";
 
 const queryClient = new QueryClient();
 
@@ -15,6 +16,7 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
+        <TourLauncher />
         <Routes>
           <Route path="/" element={<Gallery />} />
           <Route path="/editor/:id" element={<Editor />} />

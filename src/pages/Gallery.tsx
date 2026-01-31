@@ -12,6 +12,7 @@ import {EditInstrumentDialog} from '@/components/gallery/EditInstrumentDialog';
 import {exportProjectAsZip} from '@/lib/exportUtils';
 import {toast} from 'sonner';
 import type {DiagramProject} from '@/types/diagram';
+import {useTourStore} from '@/store/tourStore';
 
 export default function Gallery() {
     const navigate = useNavigate();
@@ -24,6 +25,7 @@ export default function Gallery() {
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [isNewDialogOpen, setIsNewDialogOpen] = useState(false);
     const [editingProject, setEditingProject] = useState<DiagramProject | null>(null);
+    const startTour = useTourStore(s => s.startTour);
 
     // Export mode state
     const importProject = useDiagramStore(s => s.importProject);
@@ -166,17 +168,33 @@ export default function Gallery() {
                                 size="sm"
                                 onClick={handleProjectExport}
                                 disabled={projects.length === 0}
+                                data-tour="gallery-export"
                             >
                                 <Archive className="h-4 w-4 mr-2"/>
                                 Export
                             </Button>
-                            <Button variant="outline" size="sm" onClick={() => setIsSettingsOpen(true)}>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setIsSettingsOpen(true)}
+                                data-tour="gallery-field-config"
+                            >
                                 <Settings className="h-4 w-4 mr-2"/>
                                 Field Config
                             </Button>
-                            <Button onClick={() => setIsNewDialogOpen(true)}>
+                            <Button
+                                onClick={() => setIsNewDialogOpen(true)}
+                                data-tour="gallery-new-instrument"
+                            >
                                 <PlusCircle className="h-4 w-4 mr-2"/>
                                 New Instrument
+                            </Button>
+                            <Button
+                                variant="secondary"
+                                onClick={startTour}
+                                data-tour="nav-start-tour"
+                            >
+                                Start Tour
                             </Button>
                         </div>
                     </div>
