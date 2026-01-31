@@ -33,7 +33,7 @@ export const tourSteps: Step[] = [
   },
   {
     target: '[data-tour="gallery-project-card"]',
-    content: 'Select an instrument card to open the editor and start building states.',
+    content: 'Open an instrument card (or click “New Instrument”) to enter the editor, then click Next.',
     placement: 'bottom',
   },
   {
