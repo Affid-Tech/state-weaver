@@ -16,7 +16,7 @@ export function TopBar() {
     // Handle null project case
     if (!project) {
         return (
-            <header className="h-14 bg-card border-b border-border flex items-center px-4">
+        <header className="h-14 bg-card border-b border-border flex items-center px-4" data-tour="editor-topbar">
                 <span className="text-muted-foreground">No project selected</span>
             </header>
         );
@@ -30,7 +30,7 @@ export function TopBar() {
     };
 
     return (
-        <header className="h-14 bg-card border-b border-border flex items-center justify-between px-4">
+        <header className="h-14 bg-card border-b border-border flex items-center justify-between px-4" data-tour="editor-topbar">
             <div className="flex items-center gap-4">
                 <Button variant="ghost" size="sm" onClick={handleBackToGallery}>
                     <ArrowLeft className="h-4 w-4 mr-2"/>

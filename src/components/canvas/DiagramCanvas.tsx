@@ -533,7 +533,7 @@ function DiagramCanvasInner() {
   }
 
   return (
-    <div className="flex-1 h-full" ref={reactFlowWrapper}>
+    <div className="flex-1 h-full" ref={reactFlowWrapper} data-tour="editor-canvas">
       <ContextMenu>
         <ContextMenuTrigger asChild>
           <div className="h-full">

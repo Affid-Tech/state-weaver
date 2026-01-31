@@ -57,7 +57,7 @@ export function StructureSidebar() {
   // Handle null project case
   if (!project) {
     return (
-      <aside className="w-64 bg-sidebar border-r border-sidebar-border flex flex-col items-center justify-center">
+      <aside className="w-64 bg-sidebar border-r border-sidebar-border flex flex-col items-center justify-center" data-tour="editor-structure-sidebar">
         <p className="text-sm text-sidebar-muted-foreground">No project selected</p>
       </aside>
     );
@@ -131,7 +131,7 @@ export function StructureSidebar() {
   );
 
   return (
-    <aside className="w-64 bg-sidebar border-r border-sidebar-border flex flex-col">
+    <aside className="w-64 bg-sidebar border-r border-sidebar-border flex flex-col" data-tour="editor-structure-sidebar">
       {/* Topics Section */}
       <div className="flex-1 flex flex-col min-h-0">
         <div className="p-4 flex items-center justify-between border-b border-sidebar-border">

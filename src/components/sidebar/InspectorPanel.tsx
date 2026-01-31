@@ -162,7 +162,7 @@ export function InspectorPanel() {
   };
 
   return (
-    <aside className="w-80 bg-card border-l border-border flex flex-col">
+    <aside className="w-80 bg-card border-l border-border flex flex-col" data-tour="editor-inspector">
       <Tabs defaultValue="inspector" className="flex-1 flex flex-col">
         <TabsList className="m-2 grid grid-cols-2">
           <TabsTrigger value="inspector">Inspector</TabsTrigger>
