@@ -21,10 +21,11 @@ export function TourLauncher() {
     if (!currentStep.hideFooter) return;
 
     const targetSelector = currentStep.target as string;
-    const target = document.querySelector(targetSelector);
-    if (!target) return;
 
-    const handleClick = () => {
+    const handlePointerDown = (event: PointerEvent) => {
+      const targetElement = event.target instanceof Element ? event.target : null;
+      if (!targetElement?.closest(targetSelector)) return;
+
       // Advance to next step after a short delay to allow modal/dialog to open
       setTimeout(() => {
         waitingForTarget.current = true;
@@ -32,8 +33,8 @@ export function TourLauncher() {
       }, 150);
     };
 
-    target.addEventListener('click', handleClick);
-    return () => target.removeEventListener('click', handleClick);
+    document.addEventListener('pointerdown', handlePointerDown);
+    return () => document.removeEventListener('pointerdown', handlePointerDown);
   }, [run, stepIndex, currentStep, setStepIndex]);
 
   // Watch for target to become available when waiting
