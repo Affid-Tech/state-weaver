@@ -26,6 +26,7 @@ interface ComboboxProps {
   emptyMessage?: string;
   className?: string;
   allowClear?: boolean;
+  triggerProps?: React.ComponentPropsWithoutRef<typeof Button>;
 }
 
 export function Combobox({
@@ -36,6 +37,7 @@ export function Combobox({
   emptyMessage = "No options found.",
   className,
   allowClear = true,
+  triggerProps,
 }: ComboboxProps) {
   const [open, setOpen] = React.useState(false);
   const [inputValue, setInputValue] = React.useState(value);
@@ -86,7 +88,12 @@ export function Combobox({
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className={cn("w-full justify-between font-normal", className)}
+          {...triggerProps}
+          className={cn(
+            "w-full justify-between font-normal",
+            className,
+            triggerProps?.className
+          )}
         >
           <span className={cn(!value && "text-muted-foreground", "flex-1 text-left truncate")}>
             {value || placeholder}

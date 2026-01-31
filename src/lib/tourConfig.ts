@@ -76,11 +76,15 @@ export const galleryTourSteps: Step[] = [
     target: '[data-tour="new-instrument-type"]',
     content: 'Choose the instrument type you want to build.',
     placement: 'bottom',
+    spotlightClicks: true,
+    disableOverlay: true,
   },
   {
     target: '[data-tour="new-instrument-revision"]',
     content: 'Pick the revision that matches your new instrument.',
     placement: 'bottom',
+    spotlightClicks: true,
+    disableOverlay: true,
   },
   {
     target: '[data-tour="new-instrument-description"]',
@@ -123,6 +127,8 @@ export const editorTourSteps: Step[] = [
     target: '[data-tour="editor-topic-type"]',
     content: 'Select a topic type for the root topic.',
     placement: 'bottom',
+    spotlightClicks: true,
+    disableOverlay: true,
   },
   {
     target: '[data-tour="editor-topic-kind"]',
@@ -147,6 +153,8 @@ export const editorTourSteps: Step[] = [
     target: '[data-tour="editor-topic-type"]',
     content: 'Choose another topic type for the normal topic.',
     placement: 'bottom',
+    spotlightClicks: true,
+    disableOverlay: true,
   },
   {
     target: '[data-tour="editor-topic-kind"]',
