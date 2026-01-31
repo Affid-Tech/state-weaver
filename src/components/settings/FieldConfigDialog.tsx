@@ -1,4 +1,4 @@
-import {useState} from 'react';
+import {useEffect, useState} from 'react';
 import {Plus, Trash2} from 'lucide-react';
 import {Button} from '@/components/ui/button';
 import {Input} from '@/components/ui/input';
@@ -7,6 +7,7 @@ import {ScrollArea} from '@/components/ui/scroll-area';
 import {Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,} from '@/components/ui/dialog';
 import {Popover, PopoverContent, PopoverTrigger} from '@/components/ui/popover';
 import {useDiagramStore} from '@/store/diagramStore';
+import {useTourStore} from '@/store/tourStore';
 import {toast} from 'sonner';
 import {isValidEnumName} from '@/lib/validation';
 import {FieldConfig} from '@/types/fieldConfig';
@@ -40,6 +41,7 @@ const FLOW_TYPE_COLOR_PRESETS = [
 
 export function FieldConfigDialog({ open, onOpenChange }: FieldConfigDialogProps) {
   const { fieldConfig, updateFieldConfig } = useDiagramStore();
+  const { run: isTourRunning, activeTour, stepIndex, setStepIndex } = useTourStore();
   const [newValues, setNewValues] = useState<Record<EditableFieldKey, string>>({
     revisions: '',
     instrumentTypes: '',
@@ -47,6 +49,31 @@ export function FieldConfigDialog({ open, onOpenChange }: FieldConfigDialogProps
     messageTypes: '',
     flowTypes: '',
   });
+  const [activeTab, setActiveTab] = useState<EditableFieldKey>('revisions');
+
+  useEffect(() => {
+    if (open) {
+      setActiveTab('revisions');
+    }
+  }, [open]);
+
+  const handleTabChange = (value: string) => {
+    const tab = value as EditableFieldKey;
+    setActiveTab(tab);
+    if (isTourRunning && activeTour === 'gallery') {
+      const tabStepIndexMap: Record<EditableFieldKey, number> = {
+        revisions: 4,
+        instrumentTypes: 5,
+        topicTypes: 6,
+        messageTypes: 7,
+        flowTypes: 8,
+      };
+      const nextIndex = tabStepIndexMap[tab];
+      if (nextIndex !== undefined && stepIndex >= 4 && stepIndex <= 8) {
+        setStepIndex(nextIndex);
+      }
+    }
+  };
 
   const handleAddValue = (field: EditableFieldKey) => {
     const value = newValues[field].trim();
@@ -189,7 +216,7 @@ export function FieldConfigDialog({ open, onOpenChange }: FieldConfigDialogProps
           </DialogDescription>
         </DialogHeader>
 
-        <Tabs defaultValue="revisions" className="flex flex-col">
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="flex flex-col">
           <TabsList className="grid grid-cols-5 mb-4">
             <>
               {(Object.keys(FIELD_LABELS) as EditableFieldKey[]).map((tab) => {

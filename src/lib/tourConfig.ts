@@ -139,11 +139,14 @@ export const editorTourSteps: Step[] = [
     placement: 'bottom',
     spotlightClicks: true,
     disableOverlay: true,
+    hideFooter: true,
   },
   {
     target: '[data-tour="editor-topic-kind"]',
     content: 'Set the kind to Root (Instrument Entry).',
     placement: 'bottom',
+    spotlightClicks: true,
+    hideFooter: true,
   },
   {
     target: '[data-tour="editor-topic-create-confirm"]',
@@ -165,11 +168,14 @@ export const editorTourSteps: Step[] = [
     placement: 'bottom',
     spotlightClicks: true,
     disableOverlay: true,
+    hideFooter: true,
   },
   {
     target: '[data-tour="editor-topic-kind"]',
     content: 'Leave the kind as Normal.',
     placement: 'bottom',
+    spotlightClicks: true,
+    hideFooter: true,
   },
   {
     target: '[data-tour="editor-topic-create-confirm"]',
