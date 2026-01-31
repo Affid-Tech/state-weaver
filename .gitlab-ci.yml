@@ -1,5 +1,15 @@
 image: node:24
 
+stages:
+  - test
+  - deploy
+
+test:
+  stage: test
+  script:
+    - npm install
+    - npm test
+
 create-pages:
   stage: deploy
   script:
