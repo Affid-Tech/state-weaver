@@ -8,6 +8,7 @@ import { useTourStore } from '@/store/tourStore';
 export function TourLauncher() {
   const { run, stepIndex, activeTour, setStepIndex, stopTour } = useTourStore();
   const waitingForTarget = useRef(false);
+  const autoAdvanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [joyrideKey, setJoyrideKey] = useState(0);
 
   const steps = activeTour === 'editor' ? editorTourSteps : galleryTourSteps;
@@ -97,6 +98,27 @@ export function TourLauncher() {
 
     return () => observer.disconnect();
   }, [run, stepIndex, currentStep]);
+
+  // Auto-advance passive steps to keep the tour moving
+  useEffect(() => {
+    if (!run || !currentStep?.autoAdvanceMs) return;
+    if (stepIndex >= steps.length - 1) return;
+
+    if (autoAdvanceTimer.current) {
+      clearTimeout(autoAdvanceTimer.current);
+    }
+
+    autoAdvanceTimer.current = setTimeout(() => {
+      setStepIndex(stepIndex + 1);
+    }, currentStep.autoAdvanceMs);
+
+    return () => {
+      if (autoAdvanceTimer.current) {
+        clearTimeout(autoAdvanceTimer.current);
+        autoAdvanceTimer.current = null;
+      }
+    };
+  }, [run, stepIndex, currentStep, steps.length, setStepIndex]);
 
   const handleCallback = (data: CallBackProps) => {
     const { status, type, index, action } = data;
