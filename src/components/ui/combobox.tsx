@@ -41,6 +41,11 @@ export function Combobox({
 }: ComboboxProps) {
   const [open, setOpen] = React.useState(false);
   const [inputValue, setInputValue] = React.useState(value);
+  const triggerTourId =
+    typeof triggerProps?.["data-tour"] === "string"
+      ? triggerProps["data-tour"]
+      : undefined;
+  const optionsTourId = triggerTourId ? `${triggerTourId}-options` : undefined;
 
   // Keep inputValue in sync with value prop
   React.useEffect(() => {
@@ -114,7 +119,11 @@ export function Combobox({
           </div>
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+      <PopoverContent
+        className="w-[--radix-popover-trigger-width] p-0"
+        align="start"
+        data-tour={optionsTourId}
+      >
         <Command shouldFilter={false}>
           <CommandInput
             placeholder={`Filter ${placeholder.toLowerCase()}...`}

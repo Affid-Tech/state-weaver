@@ -88,7 +88,7 @@ export const galleryTourSteps: TourStep[] = [
     hideFooter: true,
   },
   {
-    target: '[data-tour="new-instrument-type"]',
+    target: '[data-tour="new-instrument-type-options"]',
     content: 'Choose the instrument type you want to build.',
     placement: 'bottom',
     spotlightClicks: true,
@@ -96,7 +96,7 @@ export const galleryTourSteps: TourStep[] = [
     advanceOnSelect: true,
   },
   {
-    target: '[data-tour="new-instrument-revision"]',
+    target: '[data-tour="new-instrument-revision-options"]',
     content: 'Pick the revision that matches your new instrument.',
     placement: 'bottom',
     spotlightClicks: true,
