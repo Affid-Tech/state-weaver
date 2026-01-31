@@ -16,9 +16,9 @@ interface FieldConfigDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-type FieldKey = keyof FieldConfig;
+type EditableFieldKey = Exclude<keyof FieldConfig, 'flowTypeColors'>;
 
-const FIELD_LABELS: Record<FieldKey, string> = {
+const FIELD_LABELS: Record<EditableFieldKey, string> = {
   revisions: 'Revisions',
   instrumentTypes: 'Instrument Types',
   topicTypes: 'Topic Types',
@@ -40,7 +40,7 @@ const FLOW_TYPE_COLOR_PRESETS = [
 
 export function FieldConfigDialog({ open, onOpenChange }: FieldConfigDialogProps) {
   const { fieldConfig, updateFieldConfig } = useDiagramStore();
-  const [newValues, setNewValues] = useState<Record<FieldKey, string>>({
+  const [newValues, setNewValues] = useState<Record<EditableFieldKey, string>>({
     revisions: '',
     instrumentTypes: '',
     topicTypes: '',
@@ -48,7 +48,7 @@ export function FieldConfigDialog({ open, onOpenChange }: FieldConfigDialogProps
     flowTypes: '',
   });
 
-  const handleAddValue = (field: FieldKey) => {
+  const handleAddValue = (field: EditableFieldKey) => {
     const value = newValues[field].trim();
     if (!value) return;
     
@@ -68,7 +68,7 @@ export function FieldConfigDialog({ open, onOpenChange }: FieldConfigDialogProps
     setNewValues((prev) => ({ ...prev, [field]: '' }));
   };
 
-  const handleRemoveValue = (field: FieldKey, value: string) => {
+  const handleRemoveValue = (field: EditableFieldKey, value: string) => {
     if (field === 'flowTypes') {
       const updatedColors = { ...(fieldConfig.flowTypeColors ?? {}) };
       delete updatedColors[value];
@@ -92,7 +92,7 @@ export function FieldConfigDialog({ open, onOpenChange }: FieldConfigDialogProps
     });
   };
 
-  const renderFieldTab = (field: FieldKey) => (
+  const renderFieldTab = (field: EditableFieldKey) => (
     <TabsContent key={field} value={field} className="mt-0 flex-1 flex flex-col">
       <ScrollArea className="flex-1 max-h-64">
         <div className="space-y-2 p-1">
@@ -192,7 +192,7 @@ export function FieldConfigDialog({ open, onOpenChange }: FieldConfigDialogProps
         <Tabs defaultValue="revisions" className="flex flex-col">
           <TabsList className="grid grid-cols-5 mb-4">
             <>
-              {(Object.keys(FIELD_LABELS) as FieldKey[]).map((tab) => {
+              {(Object.keys(FIELD_LABELS) as EditableFieldKey[]).map((tab) => {
                 return (
                     <TabsTrigger
                       key={tab}
@@ -208,7 +208,7 @@ export function FieldConfigDialog({ open, onOpenChange }: FieldConfigDialogProps
           </TabsList>
 
           <>
-            {(Object.keys(FIELD_LABELS) as FieldKey[]).map((tab) => {
+            {(Object.keys(FIELD_LABELS) as EditableFieldKey[]).map((tab) => {
               return renderFieldTab(tab)
             })}
           </>

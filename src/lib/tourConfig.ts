@@ -18,8 +18,10 @@ export const galleryTourSteps: Step[] = [
   },
   {
     target: '[data-tour="gallery-field-config"]',
-    content: 'Open Field Config to define the dropdown options used throughout the app.',
+    content: 'Click Field Config to open the settings dialog.',
     placement: 'bottom',
+    spotlightClicks: true,
+    hideFooter: true,
   },
   {
     target: '[data-tour="field-config-tab-revisions"]',
@@ -50,6 +52,8 @@ export const galleryTourSteps: Step[] = [
     target: '[data-tour="field-config-done"]',
     content: 'Close Field Config when you are done adding values.',
     placement: 'top',
+    spotlightClicks: true,
+    hideFooter: true,
   },
   {
     target: '[data-tour="gallery-search"]',
@@ -65,6 +69,8 @@ export const galleryTourSteps: Step[] = [
     target: '[data-tour="gallery-new-instrument"]',
     content: 'Click New Instrument to open the creation dialog.',
     placement: 'bottom',
+    spotlightClicks: true,
+    hideFooter: true,
   },
   {
     target: '[data-tour="new-instrument-type"]',
@@ -85,6 +91,8 @@ export const galleryTourSteps: Step[] = [
     target: '[data-tour="new-instrument-create"]',
     content: 'Click Create to finish the gallery tour and open the editor.',
     placement: 'top',
+    spotlightClicks: true,
+    hideFooter: true,
   },
 ];
 
@@ -108,6 +116,8 @@ export const editorTourSteps: Step[] = [
     target: '[data-tour="editor-topic-create"]',
     content: 'Click + to add your first topic. We will create a root topic first.',
     placement: 'right',
+    spotlightClicks: true,
+    hideFooter: true,
   },
   {
     target: '[data-tour="editor-topic-type"]',
@@ -123,11 +133,15 @@ export const editorTourSteps: Step[] = [
     target: '[data-tour="editor-topic-create-confirm"]',
     content: 'Create the root topic.',
     placement: 'top',
+    spotlightClicks: true,
+    hideFooter: true,
   },
   {
     target: '[data-tour="editor-topic-create"]',
     content: 'Click + again to add a normal topic.',
     placement: 'right',
+    spotlightClicks: true,
+    hideFooter: true,
   },
   {
     target: '[data-tour="editor-topic-type"]',
@@ -143,6 +157,8 @@ export const editorTourSteps: Step[] = [
     target: '[data-tour="editor-topic-create-confirm"]',
     content: 'Create the normal topic to continue.',
     placement: 'top',
+    spotlightClicks: true,
+    hideFooter: true,
   },
   {
     target: '[data-tour="editor-canvas"]',
@@ -153,6 +169,8 @@ export const editorTourSteps: Step[] = [
     target: '[data-tour="editor-inspector-add-state"]',
     content: 'Use Add State to create the first state in the selected topic.',
     placement: 'left',
+    spotlightClicks: true,
+    hideFooter: true,
   },
   {
     target: '[data-tour="editor-add-state-label"]',
