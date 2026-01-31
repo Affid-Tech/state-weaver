@@ -28,6 +28,7 @@ export interface DiagramState {
   selectedElementType: 'state' | 'transition' | null;
   viewMode: 'topic' | 'aggregate';
   transitionVisibility: Record<string, boolean>;
+  hiddenSelfLoopTransitionIds: Record<string, boolean>;
   
   // Global field config (shared across all projects)
   fieldConfig: FieldConfig;
@@ -263,6 +264,7 @@ export const useDiagramStore = create<DiagramState>()(
         selectedElementType: null,
         viewMode: 'topic',
         transitionVisibility: {},
+        hiddenSelfLoopTransitionIds: {},
         fieldConfig: DEFAULT_FIELD_CONFIG,
 
         getActiveProject: () => {
