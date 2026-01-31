@@ -24,3 +24,8 @@ Object.defineProperty(window, "ResizeObserver", {
   writable: true,
   value: ResizeObserverMock,
 });
+
+Object.defineProperty(window.HTMLElement.prototype, "scrollIntoView", {
+  writable: true,
+  value: () => {},
+});

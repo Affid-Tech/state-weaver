@@ -151,7 +151,9 @@ describe("diagramStore", () => {
     expect(useDiagramStore.getState().selectedElementType).toBe("transition");
 
     useDiagramStore.getState().selectTopic("topic-a");
-    expect(useDiagramStore.getState().selectedTopicId).toBe("topic-a");
+    expect(useDiagramStore.getState().getActiveProject()?.selectedTopicId).toBe(
+      "topic-a",
+    );
     expect(useDiagramStore.getState().selectedElementId).toBeNull();
     expect(useDiagramStore.getState().selectedElementType).toBeNull();
 
