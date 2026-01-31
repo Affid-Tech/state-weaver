@@ -77,7 +77,7 @@ export function NewInstrumentDialog({ open, onOpenChange, onCreated }: NewInstru
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">
-          <div className="space-y-2" data-tour="new-instrument-type">
+          <div className="space-y-2">
             <Label>Instrument Type *</Label>
             <Combobox
               value={instrumentType}
@@ -85,9 +85,10 @@ export function NewInstrumentDialog({ open, onOpenChange, onCreated }: NewInstru
               options={instrumentTypeOptions}
               placeholder="Select or enter type..."
               allowClear={false}
+              triggerProps={{ 'data-tour': 'new-instrument-type' }}
             />
           </div>
-          <div className="space-y-2" data-tour="new-instrument-revision">
+          <div className="space-y-2">
             <Label>Revision *</Label>
             <Combobox
               value={revision}
@@ -95,6 +96,7 @@ export function NewInstrumentDialog({ open, onOpenChange, onCreated }: NewInstru
               options={revisionOptions}
               placeholder="Select or enter revision..."
               allowClear={false}
+              triggerProps={{ 'data-tour': 'new-instrument-revision' }}
             />
           </div>
           <div className="space-y-2" data-tour="new-instrument-description">

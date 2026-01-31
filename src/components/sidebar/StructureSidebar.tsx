@@ -157,13 +157,14 @@ export function StructureSidebar() {
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4 py-4">
-                <div className="space-y-2" data-tour="editor-topic-type">
+                <div className="space-y-2">
                   <Label>Topic Type *</Label>
                   <Combobox
                     value={newTopicId}
                     onChange={setNewTopicId}
                     options={availableTopicTypesForCreate}
                     placeholder="e.g., Release"
+                    triggerProps={{ 'data-tour': 'editor-topic-type' }}
                   />
                 </div>
                 <div className="space-y-2">
