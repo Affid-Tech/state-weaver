@@ -13,7 +13,6 @@ const resetStore = () => {
     selectedElementType: null,
     viewMode: "topic",
     transitionVisibility: {},
-    hiddenSelfLoopTransitionIds: {},
     fieldConfig: JSON.parse(JSON.stringify(DEFAULT_FIELD_CONFIG)),
   });
 };
@@ -172,16 +171,29 @@ describe("diagramStore", () => {
     ).toBeUndefined();
   });
 
-  it("toggles self-loop visibility", () => {
-    useDiagramStore.getState().toggleSelfLoopTransitionVisibility("loop-1");
-    expect(useDiagramStore.getState().isSelfLoopTransitionHidden("loop-1")).toBe(
-      true,
+  it("rehydrates transition visibility from storage", async () => {
+    const persistedState = {
+      projects: [],
+      activeProjectId: null,
+      selectedElementId: null,
+      selectedElementType: null,
+      viewMode: "topic",
+      transitionVisibility: {
+        "transition-123": false,
+      },
+      fieldConfig: JSON.parse(JSON.stringify(DEFAULT_FIELD_CONFIG)),
+    };
+
+    localStorage.setItem(
+      "diagram-workspace",
+      JSON.stringify({ state: persistedState, version: 0 }),
     );
 
-    useDiagramStore.getState().toggleSelfLoopTransitionVisibility("loop-1");
-    expect(useDiagramStore.getState().isSelfLoopTransitionHidden("loop-1")).toBe(
-      false,
-    );
+    await useDiagramStore.persist.rehydrate();
+
+    expect(
+      useDiagramStore.getState().transitionVisibility["transition-123"],
+    ).toBe(false);
   });
 
   it("rehydrates transition visibility from storage", async () => {
@@ -272,9 +284,6 @@ describe("diagramStore", () => {
         "transition-1": true,
         "transition-2": true,
       },
-      hiddenSelfLoopTransitionIds: {
-        "transition-1": true,
-      },
       fieldConfig: JSON.parse(JSON.stringify(DEFAULT_FIELD_CONFIG)),
       createProject: useDiagramStore.getState().createProject,
       duplicateProject: useDiagramStore.getState().duplicateProject,
@@ -308,10 +317,6 @@ describe("diagramStore", () => {
         useDiagramStore.getState().setTransitionsVisibility,
       selectElement: useDiagramStore.getState().selectElement,
       setViewMode: useDiagramStore.getState().setViewMode,
-      isSelfLoopTransitionHidden:
-        useDiagramStore.getState().isSelfLoopTransitionHidden,
-      toggleSelfLoopTransitionVisibility:
-        useDiagramStore.getState().toggleSelfLoopTransitionVisibility,
       updateFieldConfig: useDiagramStore.getState().updateFieldConfig,
       exportInstrument: useDiagramStore.getState().exportInstrument,
       exportProject: useDiagramStore.getState().exportProject,
@@ -347,9 +352,6 @@ describe("diagramStore", () => {
     expect(remainingTransitions).not.toContain("transition-1");
     expect(
       useDiagramStore.getState().transitionVisibility["transition-1"],
-    ).toBeUndefined();
-    expect(
-      useDiagramStore.getState().hiddenSelfLoopTransitionIds["transition-1"],
     ).toBeUndefined();
 
     const updatedTransition = importedTopic.transitions.find(
