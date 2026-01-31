@@ -11,8 +11,12 @@ type UserEventInstance = {
 const userEvent = {
   setup: (): UserEventInstance => ({
     click: async (element) => {
+      if (element instanceof HTMLElement) {
+        element.focus();
+      }
       fireEvent.pointerDown(element);
       fireEvent.mouseDown(element);
+      fireEvent.pointerUp(element);
       fireEvent.mouseUp(element);
       fireEvent.click(element);
     },
