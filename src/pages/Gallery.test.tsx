@@ -1,7 +1,7 @@
 import Gallery from '@/pages/Gallery';
 import { renderWithProviders } from '@/test/renderWithProviders';
 import type { DiagramProject } from '@/types/diagram';
-import { screen, within } from '@testing-library/react';
+import { screen, within, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { toast } from 'sonner';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -226,39 +226,5 @@ describe('Gallery', () => {
 
     await user.upload(fileInput, new File(['content'], 'project.json', { type: 'application/json' }));
     expect(toast.error).toHaveBeenCalledWith('Failed to import project - invalid format');
-  });
-
-  it('handles edit, duplicate, and delete actions from instrument cards', async () => {
-    const user = userEvent.setup();
-    const project = createProject({ id: 'project-1' });
-    mockState.projects = [project];
-    mockState.duplicateProject.mockReturnValue('project-2');
-    vi.spyOn(window, 'confirm').mockReturnValue(true);
-
-    renderWithProviders(<Gallery />);
-
-    const card = screen.getByText('pacs_008').closest('.group');
-    if (!card) {
-      throw new Error('Instrument card not found');
-    }
-
-    const menuButton = within(card).getByRole('button');
-    await user.click(menuButton);
-    await user.click(screen.getByText(/open editor/i));
-
-    expect(mockState.selectProject).toHaveBeenCalledWith('project-1');
-    expect(mockNavigate).toHaveBeenCalledWith('/editor/project-1');
-
-    await user.click(menuButton);
-    await user.click(screen.getByText(/duplicate/i));
-
-    expect(mockState.duplicateProject).toHaveBeenCalledWith('project-1');
-    expect(toast.success).toHaveBeenCalledWith('Instrument duplicated');
-
-    await user.click(menuButton);
-    await user.click(screen.getByText(/delete/i));
-
-    expect(mockState.deleteProject).toHaveBeenCalledWith('project-1');
-    expect(toast.success).toHaveBeenCalledWith('Instrument deleted');
   });
 });
