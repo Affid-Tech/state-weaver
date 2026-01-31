@@ -12,13 +12,17 @@ const MIN_CODE_WIDTH = 100;
 const MAX_CODE_WIDTH = 600;
 const DEFAULT_CODE_WIDTH = 320;
 
-export function PreviewPanel() {
+type PreviewPanelProps = {
+  isExpanded: boolean;
+  onToggleExpanded: () => void;
+};
+
+export function PreviewPanel({ isExpanded, onToggleExpanded }: PreviewPanelProps) {
   // Use selector to get active project
   const project = useDiagramStore(s => s.getActiveProject());
   const viewMode = useDiagramStore(s => s.viewMode);
   const setViewMode = useDiagramStore(s => s.setViewMode);
   
-  const [isExpanded, setIsExpanded] = useState(true);
   const [codeWidth, setCodeWidth] = useState(DEFAULT_CODE_WIDTH);
   const [isDragging, setIsDragging] = useState(false);
   const [svg, setSvg] = useState<string | null>(null);
@@ -112,7 +116,7 @@ export function PreviewPanel() {
     <div className="border-t border-border bg-card flex flex-col h-full overflow-hidden" data-tour="editor-preview">
       <div className="flex items-center justify-between px-4 py-2 border-b border-border flex-shrink-0">
         <button
-          onClick={() => setIsExpanded(!isExpanded)}
+          onClick={onToggleExpanded}
           className="flex items-center gap-2 text-sm font-medium hover:text-primary transition-colors"
         >
           {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
