@@ -14,10 +14,22 @@ const userEvent = {
       if (element instanceof HTMLElement) {
         element.focus();
       }
-      fireEvent.pointerDown(element);
-      fireEvent.mouseDown(element);
-      fireEvent.pointerUp(element);
-      fireEvent.mouseUp(element);
+      fireEvent.pointerDown(element, {
+        pointerId: 1,
+        pointerType: "mouse",
+        isPrimary: true,
+        button: 0,
+        buttons: 1,
+      });
+      fireEvent.mouseDown(element, { button: 0, buttons: 1 });
+      fireEvent.pointerUp(element, {
+        pointerId: 1,
+        pointerType: "mouse",
+        isPrimary: true,
+        button: 0,
+        buttons: 0,
+      });
+      fireEvent.mouseUp(element, { button: 0, buttons: 0 });
       fireEvent.click(element);
     },
     type: async (element, text) => {
