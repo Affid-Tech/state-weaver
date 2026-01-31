@@ -68,10 +68,10 @@ describe("EditInstrumentDialog", () => {
     const [typeCombobox, revisionCombobox] = screen.getAllByRole("combobox");
 
     fireEvent.click(typeCombobox);
-    fireEvent.click(screen.getByText("TypeB"));
+    fireEvent.click(screen.getByRole("option", { name: "TypeB" }));
 
     fireEvent.click(revisionCombobox);
-    fireEvent.click(screen.getByText("R2"));
+    fireEvent.click(screen.getByRole("option", { name: "R2" }));
 
     const saveButton = screen.getByRole("button", { name: "Save" });
     fireEvent.click(saveButton);
