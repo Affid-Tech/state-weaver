@@ -30,6 +30,21 @@ Object.defineProperty(window.HTMLElement.prototype, "scrollIntoView", {
   value: () => {},
 });
 
+Object.defineProperty(window.HTMLElement.prototype, "hasPointerCapture", {
+  writable: true,
+  value: () => false,
+});
+
+Object.defineProperty(window.HTMLElement.prototype, "setPointerCapture", {
+  writable: true,
+  value: () => {},
+});
+
+Object.defineProperty(window.HTMLElement.prototype, "releasePointerCapture", {
+  writable: true,
+  value: () => {},
+});
+
 class FileReaderMock {
   onload: ((event: { target: { result: string } }) => void) | null = null;
   onerror: ((event: { target: { error: Error } }) => void) | null = null;
