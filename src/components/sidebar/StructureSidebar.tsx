@@ -30,6 +30,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Combobox } from '@/components/ui/combobox';
 import { useDiagramStore } from '@/store/diagramStore';
 import { cn } from '@/lib/utils';
+import { dispatchTourSelect } from '@/lib/tourEvents';
 import { toast } from 'sonner';
 import type { TopicKind, TopicData } from '@/types/diagram';
 
@@ -161,7 +162,12 @@ export function StructureSidebar() {
                   <Label>Topic Type *</Label>
                   <Combobox
                     value={newTopicId}
-                    onChange={setNewTopicId}
+                    onChange={(value) => {
+                      setNewTopicId(value);
+                      if (value) {
+                        dispatchTourSelect('editor-topic-type');
+                      }
+                    }}
                     options={availableTopicTypesForCreate}
                     placeholder="e.g., Release"
                     triggerProps={{ 'data-tour': 'editor-topic-type' }}
@@ -177,7 +183,13 @@ export function StructureSidebar() {
                 </div>
                 <div className="space-y-2">
                   <Label>Kind</Label>
-                  <Select value={newTopicKind} onValueChange={(v) => setNewTopicKind(v as TopicKind)}>
+                  <Select
+                    value={newTopicKind}
+                    onValueChange={(value) => {
+                      setNewTopicKind(value as TopicKind);
+                      dispatchTourSelect('editor-topic-kind');
+                    }}
+                  >
                     <SelectTrigger data-tour="editor-topic-kind">
                       <SelectValue />
                     </SelectTrigger>
