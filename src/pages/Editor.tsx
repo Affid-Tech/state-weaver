@@ -18,6 +18,7 @@ export default function Editor() {
   const [canvasHeight, setCanvasHeight] = useState<number | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isReady, setIsReady] = useState(false);
+  const [isPreviewExpanded, setIsPreviewExpanded] = useState(true);
 
   // Select the project based on URL param
   useEffect(() => {
@@ -94,18 +95,27 @@ export default function Editor() {
           </div>
           
           {/* Draggable divider */}
-          <div
-            onMouseDown={handleDragStart}
-            className={`h-2 cursor-row-resize flex-shrink-0 flex items-center justify-center transition-colors ${
-              isDragging ? 'bg-primary/30' : 'bg-border hover:bg-primary/20'
-            }`}
-            title="Drag to resize"
-          >
-            <div className="w-12 h-1 rounded-full bg-muted-foreground/30" />
-          </div>
+          {isPreviewExpanded && (
+            <div
+              onMouseDown={handleDragStart}
+              className={`h-2 cursor-row-resize flex-shrink-0 flex items-center justify-center transition-colors ${
+                isDragging ? 'bg-primary/30' : 'bg-border hover:bg-primary/20'
+              }`}
+              title="Drag to resize"
+            >
+              <div className="w-12 h-1 rounded-full bg-muted-foreground/30" />
+            </div>
+          )}
           
-          <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
-            <PreviewPanel />
+          <div
+            className={`flex flex-col overflow-hidden ${
+              isPreviewExpanded ? 'flex-1 min-h-0' : 'flex-none h-auto'
+            }`}
+          >
+            <PreviewPanel
+              isExpanded={isPreviewExpanded}
+              onToggleExpanded={() => setIsPreviewExpanded(prev => !prev)}
+            />
           </div>
         </main>
         <InspectorPanel />
