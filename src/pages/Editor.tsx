@@ -87,9 +87,13 @@ export default function Editor() {
       <div className="flex-1 flex min-h-0">
         <StructureSidebar />
         <main className="flex-1 flex flex-col min-w-0">
-          <div 
-            className="flex-shrink-0 overflow-hidden"
-            style={{ height: canvasHeight ?? '60%' }}
+          <div
+            className={
+              isPreviewExpanded
+                ? 'flex-shrink-0 overflow-hidden'
+                : 'flex-1 min-h-0 overflow-hidden'
+            }
+            style={isPreviewExpanded ? { height: canvasHeight ?? '60%' } : undefined}
           >
             <DiagramCanvas />
           </div>
