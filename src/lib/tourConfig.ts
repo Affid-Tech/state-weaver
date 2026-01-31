@@ -1,6 +1,11 @@
 import type { Step } from 'react-joyride';
 
-export const galleryTourSteps: Step[] = [
+export type TourStep = Step & {
+  advanceOnSelect?: boolean;
+  hideFooter?: boolean;
+};
+
+export const galleryTourSteps: TourStep[] = [
   {
     target: '[data-tour="gallery-start-tour"]',
     content: 'Use Start Tour any time to replay this walkthrough from the gallery.',
@@ -88,6 +93,7 @@ export const galleryTourSteps: Step[] = [
     placement: 'bottom',
     spotlightClicks: true,
     disableOverlay: true,
+    advanceOnSelect: true,
   },
   {
     target: '[data-tour="new-instrument-revision"]',
@@ -95,6 +101,7 @@ export const galleryTourSteps: Step[] = [
     placement: 'bottom',
     spotlightClicks: true,
     disableOverlay: true,
+    advanceOnSelect: true,
   },
   {
     target: '[data-tour="new-instrument-description"]',
@@ -110,7 +117,7 @@ export const galleryTourSteps: Step[] = [
   },
 ];
 
-export const editorTourSteps: Step[] = [
+export const editorTourSteps: TourStep[] = [
   {
     target: '[data-tour="editor-start-tour"]',
     content: 'Use Start Editor Tour any time you want a refresher on the canvas tools.',
@@ -140,6 +147,7 @@ export const editorTourSteps: Step[] = [
     spotlightClicks: true,
     disableOverlay: true,
     hideFooter: true,
+    advanceOnSelect: true,
   },
   {
     target: '[data-tour="editor-topic-kind"]',
@@ -147,6 +155,7 @@ export const editorTourSteps: Step[] = [
     placement: 'bottom',
     spotlightClicks: true,
     hideFooter: true,
+    advanceOnSelect: true,
   },
   {
     target: '[data-tour="editor-topic-create-confirm"]',
@@ -169,6 +178,7 @@ export const editorTourSteps: Step[] = [
     spotlightClicks: true,
     disableOverlay: true,
     hideFooter: true,
+    advanceOnSelect: true,
   },
   {
     target: '[data-tour="editor-topic-kind"]',
@@ -176,6 +186,7 @@ export const editorTourSteps: Step[] = [
     placement: 'bottom',
     spotlightClicks: true,
     hideFooter: true,
+    advanceOnSelect: true,
   },
   {
     target: '[data-tour="editor-topic-create-confirm"]',

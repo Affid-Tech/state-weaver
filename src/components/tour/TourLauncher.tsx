@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import Joyride, { CallBackProps, STATUS, EVENTS, ACTIONS, Step } from 'react-joyride';
+import Joyride, { CallBackProps, STATUS, EVENTS, ACTIONS } from 'react-joyride';
 import { toast } from 'sonner';
-import { editorTourSteps, galleryTourSteps } from '@/lib/tourConfig';
+import { editorTourSteps, galleryTourSteps, TourStep } from '@/lib/tourConfig';
+import { TOUR_SELECT_EVENT } from '@/lib/tourEvents';
 import { useTourStore } from '@/store/tourStore';
 
 export function TourLauncher() {
@@ -10,7 +11,12 @@ export function TourLauncher() {
   const [joyrideKey, setJoyrideKey] = useState(0);
 
   const steps = activeTour === 'editor' ? editorTourSteps : galleryTourSteps;
-  const currentStep = steps[stepIndex] as Step & { hideFooter?: boolean };
+  const currentStep = steps[stepIndex] as TourStep | undefined;
+
+  const getTourTargetKey = (selector: string) => {
+    const match = selector.match(/\[data-tour="(.+)"\]/);
+    return match?.[1];
+  };
 
   // Listen for clicks on target elements that have hideFooter
   // This advances the tour when user clicks the highlighted button
@@ -19,6 +25,7 @@ export function TourLauncher() {
 
     // Only add click listener for steps that hide the footer (require user interaction)
     if (!currentStep.hideFooter) return;
+    if (currentStep.advanceOnSelect) return;
 
     const targetSelector = currentStep.target as string;
 
@@ -35,6 +42,28 @@ export function TourLauncher() {
 
     document.addEventListener('pointerdown', handlePointerDown);
     return () => document.removeEventListener('pointerdown', handlePointerDown);
+  }, [run, stepIndex, currentStep, setStepIndex]);
+
+  // Advance only when a dropdown/combobox value is selected
+  useEffect(() => {
+    if (!run || !currentStep?.advanceOnSelect) return;
+
+    const targetSelector = currentStep.target as string;
+    const targetKey = getTourTargetKey(targetSelector);
+    if (!targetKey) return;
+
+    const handleSelect = (event: Event) => {
+      const detail = (event as CustomEvent<{ target?: string }>).detail;
+      if (detail?.target !== targetKey) return;
+
+      setTimeout(() => {
+        waitingForTarget.current = true;
+        setStepIndex(stepIndex + 1);
+      }, 150);
+    };
+
+    document.addEventListener(TOUR_SELECT_EVENT, handleSelect);
+    return () => document.removeEventListener(TOUR_SELECT_EVENT, handleSelect);
   }, [run, stepIndex, currentStep, setStepIndex]);
 
   // Watch for target to become available when waiting

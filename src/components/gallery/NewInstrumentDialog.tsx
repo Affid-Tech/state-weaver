@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/dialog';
 import { useDiagramStore } from '@/store/diagramStore';
 import { toast } from 'sonner';
+import { dispatchTourSelect } from '@/lib/tourEvents';
 
 interface NewInstrumentDialogProps {
   open: boolean;
@@ -81,7 +82,12 @@ export function NewInstrumentDialog({ open, onOpenChange, onCreated }: NewInstru
             <Label>Instrument Type *</Label>
             <Combobox
               value={instrumentType}
-              onChange={setInstrumentType}
+              onChange={(value) => {
+                setInstrumentType(value);
+                if (value) {
+                  dispatchTourSelect('new-instrument-type');
+                }
+              }}
               options={instrumentTypeOptions}
               placeholder="Select or enter type..."
               allowClear={false}
@@ -92,7 +98,12 @@ export function NewInstrumentDialog({ open, onOpenChange, onCreated }: NewInstru
             <Label>Revision *</Label>
             <Combobox
               value={revision}
-              onChange={setRevision}
+              onChange={(value) => {
+                setRevision(value);
+                if (value) {
+                  dispatchTourSelect('new-instrument-revision');
+                }
+              }}
               options={revisionOptions}
               placeholder="Select or enter revision..."
               allowClear={false}
