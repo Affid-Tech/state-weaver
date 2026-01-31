@@ -244,19 +244,19 @@ describe('Gallery', () => {
 
     const menuButton = within(card).getByRole('button');
     await user.click(menuButton);
-    await user.click(screen.getByText(/open editor/i));
+    await user.click(screen.getByText(/Open Editor/i));
 
     expect(mockState.selectProject).toHaveBeenCalledWith('project-1');
     expect(mockNavigate).toHaveBeenCalledWith('/editor/project-1');
 
     await user.click(menuButton);
-    await user.click(screen.getByText(/duplicate/i));
+    await user.click(await screen.findByRole('menuitem', { name: /duplicate/i }));
 
     expect(mockState.duplicateProject).toHaveBeenCalledWith('project-1');
     expect(toast.success).toHaveBeenCalledWith('Instrument duplicated');
 
     await user.click(menuButton);
-    await user.click(screen.getByText(/delete/i));
+    await user.click(await screen.findByRole('menuitem', { name: /delete/i }));
 
     expect(mockState.deleteProject).toHaveBeenCalledWith('project-1');
     expect(toast.success).toHaveBeenCalledWith('Instrument deleted');
