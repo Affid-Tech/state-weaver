@@ -81,7 +81,7 @@ export function EditInstrumentDialog({ open, onOpenChange, project }: EditInstru
     onOpenChange(false);
   };
 
-  const isValid = instrumentType.trim() && revision.trim() && !isDuplicate;
+  const isValid = instrumentType.trim() && revision.trim();
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

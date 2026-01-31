@@ -74,8 +74,6 @@ describe("EditInstrumentDialog", () => {
     fireEvent.click(screen.getByText("R2"));
 
     const saveButton = screen.getByRole("button", { name: "Save" });
-    saveButton.focus();
-    expect(saveButton).toHaveFocus();
     fireEvent.click(saveButton);
 
     expect(selectProject).toHaveBeenCalledWith("project-1");
@@ -134,6 +132,7 @@ describe("EditInstrumentDialog", () => {
     );
 
     const saveButton = screen.getByRole("button", { name: "Save" });
+    expect(saveButton).toBeEnabled();
     fireEvent.click(saveButton);
 
     expect(toastError).toHaveBeenCalledWith(

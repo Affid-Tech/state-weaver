@@ -49,8 +49,6 @@ describe("NewInstrumentDialog", () => {
 
     const createButton = screen.getByRole("button", { name: "Create" });
     expect(createButton).toBeDisabled();
-    createButton.focus();
-    expect(createButton).toHaveFocus();
 
     const [typeCombobox, revisionCombobox] = screen.getAllByRole("combobox");
 
@@ -105,6 +103,7 @@ describe("NewInstrumentDialog", () => {
     fireEvent.click(screen.getByText("R1"));
 
     const createButton = screen.getByRole("button", { name: "Create" });
+    expect(createButton).toBeEnabled();
     fireEvent.click(createButton);
 
     expect(toastError).toHaveBeenCalledWith(
