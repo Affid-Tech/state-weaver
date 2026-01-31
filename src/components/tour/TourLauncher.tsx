@@ -1,10 +1,12 @@
 import Joyride, { CallBackProps, STATUS } from 'react-joyride';
 import { toast } from 'sonner';
-import { tourSteps } from '@/lib/tourConfig';
+import { editorTourSteps, galleryTourSteps } from '@/lib/tourConfig';
 import { useTourStore } from '@/store/tourStore';
 
 export function TourLauncher() {
-  const { run, stepIndex, setStepIndex, stopTour } = useTourStore();
+  const { run, stepIndex, activeTour, setStepIndex, stopTour } = useTourStore();
+
+  const steps = activeTour === 'editor' ? editorTourSteps : galleryTourSteps;
 
   const handleCallback = (data: CallBackProps) => {
     const { status, type, index, action } = data;
@@ -15,12 +17,8 @@ export function TourLauncher() {
     }
 
     if (type === 'target:notFound') {
-      const step = tourSteps[index];
-      const target = typeof step?.target === 'string' ? step.target : '';
-      const isEditorStep = target.includes('editor-');
-
-      if (isEditorStep) {
-        toast('Open an instrument to continue the tour, then restart it from the gallery.');
+      if (activeTour === 'editor') {
+        toast('Open an instrument to continue the editor tour, then restart it from the top bar.');
         stopTour();
         return;
       }
@@ -37,7 +35,7 @@ export function TourLauncher() {
 
   return (
     <Joyride
-      steps={tourSteps}
+      steps={steps}
       run={run}
       stepIndex={stepIndex}
       continuous

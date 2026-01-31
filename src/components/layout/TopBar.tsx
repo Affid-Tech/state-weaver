@@ -4,11 +4,13 @@ import {ArrowLeft, FileText,} from 'lucide-react';
 import {Button} from '@/components/ui/button';
 import {useDiagramStore} from '@/store/diagramStore';
 import {hasBlockingErrors, validateProject} from '@/lib/validation';
+import {useTourStore} from '@/store/tourStore';
 
 export function TopBar() {
     const navigate = useNavigate();
     // Use selectors for reactive access
     const project = useDiagramStore(s => s.getActiveProject());
+    const startTour = useTourStore(s => s.startTour);
 
     const validationIssues = useMemo(() => project ? validateProject(project) : [], [project]);
     const hasErrors = hasBlockingErrors(validationIssues);
@@ -45,6 +47,16 @@ export function TopBar() {
             {displayName} / {project.instrument.revision}
           </span>
                 </div>
+            </div>
+            <div className="flex items-center gap-2">
+                <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => startTour('editor')}
+                    data-tour="editor-start-tour"
+                >
+                    Start Editor Tour
+                </Button>
             </div>
         </header>
     );
